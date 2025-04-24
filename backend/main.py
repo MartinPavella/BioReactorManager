@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,14 +27,15 @@ class Layer:
     id_: int
     name: str
     light_state: bool
+    valve_state: bool
 
-layers: list[Layer] = [Layer(i, f'layer_{5 - i}', True) for i in range(5)]  # Current state of the layers.
+layers: list[Layer] = [Layer(i, f'layer_{5 - i}', False, False) for i in range(5)]  # Current state of the layers.
+pump_state = False
 
-# API endpoint to provide items with local image paths
 @app.get("/get-state")
 def get_state():
     return [
-        {"id_": l.id_, "name": l.name, "light_state": l.light_state} for l in layers
+        {"id_": l.id_, "name": l.name, "light_state": l.light_state, "valve_state": l.valve_state} for l in layers
     ]
 
 
@@ -64,12 +67,62 @@ def switch_light(id_: int):
 
     return {"id_" : id_, "new_light_state": new_light_state}
 
+@app.post('/switch-valve/{id_}')
+def switch_valve(id_: int):
+    new_valve_state = not layers[id_].valve_state
+    layers[id_].valve_state = new_valve_state
+
+    if new_valve_state:
+        mqtt_manager.open_valve(id_)
+    else:
+        mqtt_manager.close_valve(id_)
+
+    return {"id_" : id_, "new_valve_state": new_valve_state}
 
 
 
+@app.post('/toggle-pump')
+def toggle_pump():
+    global pump_state
+    pump_state = not pump_state
+    if pump_state:
+        mqtt_manager.start_pump()
+    else:
+        mqtt_manager.stop_pump()
+
+    return {"new_pump_state": pump_state}
 
 
+@app.post('/harvest-all')
+def harvest_all():
+    first_layer_harvest_time = 8
+    layer_harvest_time = 5
 
+    mqtt_manager.open_valve(0)
+    mqtt_manager.start_pump()
+    time.sleep(first_layer_harvest_time)
+
+    mqtt_manager.open_valve(1)
+    mqtt_manager.close_valve(0)
+    time.sleep(layer_harvest_time)
+
+    mqtt_manager.open_valve(2)
+    mqtt_manager.close_valve(1)
+    time.sleep(layer_harvest_time)
+
+    mqtt_manager.open_valve(3)
+    mqtt_manager.close_valve(2)
+    time.sleep(layer_harvest_time)
+
+    mqtt_manager.open_valve(4)
+    mqtt_manager.close_valve(3)
+    time.sleep(layer_harvest_time)
+
+    mqtt_manager.stop_pump()
+    time.sleep(1)
+    mqtt_manager.close_valve(4)
+
+    return "Success"
 
 
 
