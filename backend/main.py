@@ -98,23 +98,36 @@ def harvest_all():
     first_layer_harvest_time = 8
     layer_harvest_time = 5
 
+    # First, close everything.
+    mqtt_manager.stop_pump()
+    global pump_state
+    pump_state = False
+    for layer in layers:
+        mqtt_manager.close_valve(layer.id_)
+        layer.valve_state = False
+
     mqtt_manager.open_valve(0)
+    time.sleep(0.5)
     mqtt_manager.start_pump()
     time.sleep(first_layer_harvest_time)
 
     mqtt_manager.open_valve(1)
+    time.sleep(0.5)
     mqtt_manager.close_valve(0)
     time.sleep(layer_harvest_time)
 
     mqtt_manager.open_valve(2)
+    time.sleep(0.5)
     mqtt_manager.close_valve(1)
     time.sleep(layer_harvest_time)
 
     mqtt_manager.open_valve(3)
+    time.sleep(0.5)
     mqtt_manager.close_valve(2)
     time.sleep(layer_harvest_time)
 
     mqtt_manager.open_valve(4)
+    time.sleep(0.5)
     mqtt_manager.close_valve(3)
     time.sleep(layer_harvest_time)
 

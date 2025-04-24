@@ -4,6 +4,7 @@ import './App.css'
 const App = () => {
     const [layers, setLayers] = useState([]); // Stores layer data
     const [pumpState, setPumpState] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const backend_uri = "http://192.168.0.102:8000";
 
@@ -18,12 +19,12 @@ const App = () => {
     // TODO Implement a more efficient solution using WebSockets.
     useEffect(() => {
         const interval = setInterval(() => {
-          fetch(backend_uri + '/get-state')  // Adjust the URL to your backend endpoint
-            .then((response) => response.json())
-            .then((data) => setLayers(data))
-            .catch((error) => console.error("Error fetching layer data:", error));
+            fetch(backend_uri + '/get-state')  // Adjust the URL to your backend endpoint
+                .then((response) => response.json())
+                .then((data) => setLayers(data))
+                .catch((error) => console.error("Error fetching layer data:", error));
         }, 1000); // 1000ms = 1 second
-               // Clean up the interval on component unmount
+        // Clean up the interval on component unmount
         return () => clearInterval(interval);
     }, []);
 
@@ -72,6 +73,7 @@ const App = () => {
     // };
 
     const handleValveCheckboxChange = (id) => {
+        if (loading) return;
         fetch(backend_uri + `/switch-valve/${id}`, {
             method: "POST",
         })
@@ -95,6 +97,7 @@ const App = () => {
     };
 
     const handlePumpToggle = () => {
+        if (loading) return;
         fetch(backend_uri + "/toggle-pump", {
             method: "POST",
         })
@@ -107,12 +110,20 @@ const App = () => {
     };
 
     const handleFullHarvestClick = () => {
+        if (loading) return;
+        setLoading(true);
         fetch(backend_uri + "/harvest-all", {
             method: "POST",
         })
             .then((response) => response.json())
-            .then(() => console.log('Harvesting all layers: Done'))
-            .catch((error) => console.error("Error sending harvest request:", error));
+            .then(() => {
+                setLoading(false);  // Set loading to false after backend responds
+                console.log('Harvesting all layers: Done');
+            })
+            .catch((error) => {
+                setLoading(false);  // Set loading to false even if there's an error
+                console.error("Error sending harvest request:", error);
+            });
     };
 
     return (
@@ -124,6 +135,7 @@ const App = () => {
                 <button
                     onClick={handleFullHarvestClick}
                     className="px-10 py-4 bg-green-600 text-white text-2xl rounded hover:bg-green-700"
+                    disabled={loading}
                 >
                     <h2>Full Harvest</h2>
                 </button>
@@ -167,6 +179,7 @@ const App = () => {
                                 type="checkbox"
                                 checked={layer.valve_state}
                                 onChange={() => handleValveCheckboxChange(layer.id_)}
+                                disabled={loading}
                                 className="mr-2"
                             />
                             Valve
@@ -179,12 +192,15 @@ const App = () => {
                     <button
                         onClick={handlePumpToggle}
                         className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
+                        disabled={loading}
                     >
                         {pumpState ? "Stop pump" : "Run pump"}
                     </button>
                 </div>
             </div>
-            <button onClick={() => handleControlLEDClick()}>
+            <button onClick={() => handleControlLEDClick()}
+                    disabled={loading}
+            >
                 Control LED
             </button>
         </div>
