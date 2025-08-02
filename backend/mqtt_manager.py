@@ -80,8 +80,8 @@ def light_off(layer_id):
     client.publish(send_to_rack_esp_topic(), command)
 
 
-def start_pump():
-    command = 'start_pump'
+def start_pump(value):
+    command = f'start_pump:{value}'
     logging.info(command)
     client.publish(send_to_pump_esp_topic(), command)
 

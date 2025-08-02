@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from "react";
+
 import './App.css'
 
 const App = () => {
@@ -96,6 +97,25 @@ const App = () => {
             .catch((error) => console.error("Error updating valve:", error));
     };
 
+
+    const handleTimerClick = () => {
+        if (loading) return;
+        fetch(backend_uri + `/timer-lights`, {
+            method: "POST",
+        })
+            .then(() => console.log("Light timer started."))
+            .catch((error) => console.error("Error with LED timer:", error));
+    };
+
+    const handleTimerMixClick = () => {
+        if (loading) return;
+        fetch(backend_uri + `/timer-mixiing`, {
+            method: "POST",
+        })
+            .then(() => console.log("Mixiing timer started."))
+            .catch((error) => console.error("Error with LED timer:", error));
+    };
+
     const handlePumpToggle = () => {
         if (loading) return;
         fetch(backend_uri + "/toggle-pump", {
@@ -124,6 +144,23 @@ const App = () => {
                 setLoading(false);  // Set loading to false even if there's an error
                 console.error("Error sending harvest request:", error);
             });
+    };
+
+    const [sliderValue, setSliderValue] = useState(50);
+
+    const handleChangeSlider = (e) => {
+        
+        console.log(e.target.value);
+        fetch(backend_uri + `/pump-power-change/${Number(e.target.value)}`, {
+            method: "POST",
+        })
+        .then((response) => response.json())
+        .then((data) => {
+            console.log(`Val: ${data.value}`);
+            setSliderValue(Number(data.value));
+        })
+        .catch((error) => console.error("Error occured while adjusting slider:", error));
+        
     };
 
     return (
@@ -203,6 +240,28 @@ const App = () => {
             >
                 Control LED
             </button>
+            <button onClick={() => handleTimerClick()}
+                    disabled={loading}
+            >
+                Light cycle start
+            </button>
+
+            <div>
+                <button onClick={() => handleTimerMixClick()}
+                    disabled={loading}
+            >
+                Mixiing cycle start
+            </button>
+            </div>
+
+
+           <div className="mt-6">      
+                  <span> {sliderValue} : </span>
+                <input id="slider" type="range" min="0" max="100" value={sliderValue} onChange={handleChangeSlider}/>
+
+            </div>  
+                
+
         </div>
     );
 };
