@@ -15,9 +15,9 @@ def log_reading(layer_id: int, reading: int):
     # TODO TMP
     logging.info(f'All readings[{layer_id}]: {get_all_readings(layer_id)}')
 
-def get_all_readings(layer_id: int) -> np.ndarray:
+def get_all_readings(layer_id: int) -> list[str]:
     with open(probe_file_name(layer_id), 'r') as f:
         readings = [reading.strip() for reading in f.read().split(',')]
-        readings = [int(reading) for reading in readings if reading.isnumeric()]
-        return np.asarray(readings)
+        readings = [reading for reading in readings if reading.isnumeric()]
+        return readings
 

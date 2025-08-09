@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import mqtt_manager
+import probe_manager
 
 app = FastAPI()
 
@@ -44,6 +45,10 @@ def get_state():
     return [
         {"id_": l.id_, "name": l.name, "light_state": l.light_state, "valve_state": l.valve_state, } for l in layers
     ]
+
+@app.get("/get-probe-data/{id_}")
+def get_probe_data(id_: int):
+    return probe_manager.get_all_readings(id_)
 
 
 class HarvestMeta(BaseModel):
