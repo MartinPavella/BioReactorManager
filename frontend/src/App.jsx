@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from "react";
+import LineChart from "./components/LineGraph.jsx";
 
 import './App.css'
 
@@ -262,6 +263,7 @@ const App = () => {
 
             </div>
 
+            <LineChart />
 
         </div>
     );
