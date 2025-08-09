@@ -109,10 +109,10 @@ const App = () => {
 
     const handleTimerMixClick = () => {
         if (loading) return;
-        fetch(backend_uri + `/timer-mixiing`, {
+        fetch(backend_uri + `/timer-mixing`, {
             method: "POST",
         })
-            .then(() => console.log("Mixiing timer started."))
+            .then(() => console.log("mixing timer started."))
             .catch((error) => console.error("Error with LED timer:", error));
     };
 
@@ -250,7 +250,7 @@ const App = () => {
                 <button onClick={() => handleTimerMixClick()}
                     disabled={loading}
             >
-                Mixiing cycle start
+                mixing cycle start
             </button>
             </div>
 
