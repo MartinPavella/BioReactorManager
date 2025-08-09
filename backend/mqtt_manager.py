@@ -4,6 +4,8 @@ import time
 import numpy as np
 import paho.mqtt.client as mqtt
 
+import probe_manager
+
 broker = '192.168.0.102'
 port = 1883
 QOS = 1
@@ -43,7 +45,14 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, message):
     msg = str(message.payload.decode('utf-8'))
-    print('Recieved from ' + message.topic + ':', f'`{msg}`')
+    logging.info('Recieved from ' + message.topic + f': `{msg}`')
+
+    # Classify the message and react accordingly.
+    if msg[:6] == 'PROBE[':
+        # Data submitted from PROBE reading. The format is: "PROBE[<layer_id>]:<read_value>"
+        layer = int(msg[6])
+        value = int(msg[9:])
+        probe_manager.log_reading(layer, value)
 
 
 def on_publish(client, userdata, mid):

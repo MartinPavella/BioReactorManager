@@ -24,7 +24,7 @@ const App = () => {
                 .then((response) => response.json())
                 .then((data) => setLayers(data))
                 .catch((error) => console.error("Error fetching layer data:", error));
-        }, 1000); // 1000ms = 1 second
+        }, 5000); // 1000ms = 1 second
         // Clean up the interval on component unmount
         return () => clearInterval(interval);
     }, []);
@@ -149,18 +149,18 @@ const App = () => {
     const [sliderValue, setSliderValue] = useState(50);
 
     const handleChangeSlider = (e) => {
-        
+
         console.log(e.target.value);
         fetch(backend_uri + `/pump-power-change/${Number(e.target.value)}`, {
             method: "POST",
         })
-        .then((response) => response.json())
-        .then((data) => {
-            console.log(`Val: ${data.value}`);
-            setSliderValue(Number(data.value));
-        })
-        .catch((error) => console.error("Error occured while adjusting slider:", error));
-        
+            .then((response) => response.json())
+            .then((data) => {
+                console.log(`Val: ${data.value}`);
+                setSliderValue(Number(data.value));
+            })
+            .catch((error) => console.error("Error occured while adjusting slider:", error));
+
     };
 
     return (
@@ -248,19 +248,20 @@ const App = () => {
 
             <div>
                 <button onClick={() => handleTimerMixClick()}
-                    disabled={loading}
-            >
-                mixing cycle start
-            </button>
+                        disabled={loading}
+                >
+                    mixing cycle start
+                </button>
             </div>
 
 
-           <div className="mt-6">      
-                  <span> {sliderValue} : </span>
-                <input id="slider" type="range" min="0" max="100" value={sliderValue} onChange={handleChangeSlider}/>
+            <div className="mt-6">
+                <span> {sliderValue} : </span>
+                <input id="slider" type="range" min="0" max="100" className="slider" value={sliderValue}
+                       onChange={handleChangeSlider}/>
 
-            </div>  
-                
+            </div>
+
 
         </div>
     );
