@@ -75,20 +75,24 @@ const App = () => {
 
     // --- UI ---
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-            <h1 className="mb-6">Nitroduck BioReactor</h1>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4 space-y-8">
+            <h1 className="text-4xl font-extrabold text-green-700">Nitroduck BioReactor</h1>
 
             {/* Tabs */}
-            <div className="flex space-x-4 mb-6">
+            <div className="flex space-x-4">
                 <button
                     onClick={() => setActiveTab("controls")}
-                    className={`px-4 py-2 rounded ${activeTab === "controls" ? "bg-green-600 text-white" : "bg-gray-300"}`}
+                    className={`px-6 py-3 rounded-lg text-lg font-semibold ${
+                        activeTab === "controls" ? "bg-green-600 text-white" : "bg-gray-300 text-gray-800"
+                    }`}
                 >
                     Controls
                 </button>
                 <button
                     onClick={() => setActiveTab("charts")}
-                    className={`px-4 py-2 rounded ${activeTab === "charts" ? "bg-green-600 text-white" : "bg-gray-300"}`}
+                    className={`px-6 py-3 rounded-lg text-lg font-semibold ${
+                        activeTab === "charts" ? "bg-green-600 text-white" : "bg-gray-300 text-gray-800"
+                    }`}
                 >
                     Charts
                 </button>
@@ -96,65 +100,70 @@ const App = () => {
 
             {/* Controls tab */}
             {activeTab === "controls" && (
-                <div className="w-full max-w-md">
+                <div className="w-full max-w-md space-y-8">
                     {/* Full Harvest Button */}
-                    <div className="mb-6">
+                    <div>
                         <button
                             onClick={handleFullHarvestClick}
-                            className="px-10 py-4 bg-green-600 text-white text-2xl rounded hover:bg-green-700"
+                            className="w-full py-8 bg-green-600 text-white text-3xl font-bold rounded-lg shadow-lg hover:bg-green-700"
                             disabled={loading}
                         >
-                            Full Harvest
+                            🌱 Full Harvest
                         </button>
                     </div>
 
                     {/* Layer controls */}
-                    {layers.map((layer) => (
-                        <div
-                            key={layer.id_}
-                            className="flex items-center justify-between bg-white p-4 mb-3 rounded-lg shadow"
-                        >
-                            <label>
-                                <span className="teal-text">{layer.name}</span>
-                                <span className="grey-text"> (ID={layer.id_})</span>
-                            </label>
+                    <div className="space-y-4">
+                        {layers.map((layer) => (
+                            <div
+                                key={layer.id_}
+                                className="flex items-center justify-between bg-white p-5 rounded-lg shadow-md"
+                            >
+                                <div>
+                                    <p className="text-lg font-semibold text-gray-800">{layer.name}</p>
+                                    <p className="text-sm text-gray-500">ID={layer.id_}</p>
+                                </div>
 
-                            <label className="ml-4 flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={layer.valve_state}
-                                    onChange={() => handleValveCheckboxChange(layer.id_)}
-                                    disabled={loading}
-                                    className="mr-2"
-                                />
-                                Valve
-                            </label>
-                        </div>
-                    ))}
-
-                    {/* Pump toggle */}
-                    <div className="mt-6">
-                        <button
-                            onClick={handlePumpToggle}
-                            className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-                            disabled={loading}
-                        >
-                            {pumpState ? "Stop pump" : "Run pump"}
-                        </button>
+                                <label className="flex items-center space-x-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={layer.valve_state}
+                                        onChange={() => handleValveCheckboxChange(layer.id_)}
+                                        disabled={loading}
+                                        className="w-7 h-7 accent-green-600"
+                                    />
+                                    <span className="text-lg font-medium">Valve</span>
+                                </label>
+                            </div>
+                        ))}
                     </div>
 
+                    {/* Pump toggle */}
+                    <button
+                        onClick={handlePumpToggle}
+                        className="w-full py-6 bg-green-600 text-white text-2xl font-semibold rounded-lg shadow-md hover:bg-green-700"
+                        disabled={loading}
+                    >
+                        {pumpState ? "⏹ Stop Pump" : "▶ Run Pump"}
+                    </button>
+
                     {/* Pump power slider */}
-                    <div className="mt-6">
-                        <span>{sliderValue} : </span>
-                        <input
-                            id="slider"
-                            type="range"
-                            min="0"
-                            max="100"
-                            className="slider"
-                            value={sliderValue}
-                            onChange={handleChangeSlider}
-                        />
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <label htmlFor="slider" className="block mb-4 text-xl font-semibold text-gray-700">
+                            Pump Power
+                        </label>
+                        <div className="flex items-center space-x-4">
+                            <input
+                                id="slider"
+                                type="range"
+                                min="0"
+                                max="100"
+                                className="w-full h-3 rounded-lg appearance-none bg-green-300 accent-green-600 cursor-pointer"
+                                value={sliderValue}
+                                onChange={handleChangeSlider}
+                            />
+                            <span className="text-lg font-bold text-gray-700">{sliderValue}</span>
+                        </div>
                     </div>
                 </div>
             )}
@@ -162,7 +171,6 @@ const App = () => {
             {/* Charts tab */}
             {activeTab === "charts" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
-                    {/* Render 5 charts */}
                     {[0, 1, 2, 3, 4].map((layerId) => (
                         <LineChart key={layerId} layerId={layerId}/>
                     ))}
@@ -170,6 +178,8 @@ const App = () => {
             )}
         </div>
     );
+
+
 };
 
 export default App;
