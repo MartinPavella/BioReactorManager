@@ -1,4 +1,3 @@
-// src/components/LineChart.js
 import React, {useEffect, useState} from "react";
 import {Line} from "react-chartjs-2";
 import {
@@ -12,49 +11,57 @@ import {
     Tooltip,
 } from "chart.js";
 
-ChartJS.register(
-    LineElement,
-    PointElement,
-    CategoryScale,
-    LinearScale,
-    Title,
-    Tooltip,
-    Legend
-);
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 const backend_uri = "http://192.168.0.102:8000";
 
-const LineChart = () => {
+const LineChart = ({layerId}) => {
     const [chartData, setChartData] = useState(null);
 
     useEffect(() => {
-        // TODO Only layer `0` is used for testing.
-        fetch(backend_uri + `/get-probe-data/0`)
-            .then((res) => {
-                if (!res.ok) throw new Error("Network response was not ok");
-                return res.json();
-            })
+
+        fetch(`${backend_uri}/get-probe-data/${layerId}`)
+            .then((res) => res.json())
             .then((values) => {
                 const labels = values.map((_, index) => index + 1);
-
                 setChartData({
                     labels,
                     datasets: [
                         {
-                            label: "Biomass",
+                            label: `Biomass`,
                             data: values,
-                            borderColor: "rgb(75, 192, 192)",
+                            borderColor: `hsl(${layerId * 60}, 70%, 50%)`,
                             tension: 0.1,
                         },
                     ],
                 });
             })
-            .catch((err) => console.error("Error fetching chart data:", err));
-    }, []);
+            .catch((err) => console.error(`Error fetching chart data for layer ${layerId}:`, err));
+    }, [layerId]);
 
     return (
-        <div style={{width: "600px", height: "400px", margin: "auto"}}>
-            <h2>PROBE 1</h2>
-            {chartData ? <Line data={chartData}/> : <p>Loading...</p>}
+        <div className="w-full mb-6"> {/* spacing between charts */}
+            <h2 className="text-center mb-2">Layer {5 - layerId}</h2>
+            <div style={{height: "200px"}}>
+                {chartData ? (
+                    <Line
+                        data={chartData}
+                        options={{
+                            responsive: true,
+                            maintainAspectRatio: false, // chart fills height: 200px
+                            plugins: {
+                                legend: {
+                                    position: "top",
+                                },
+                                title: {
+                                    display: false, // we already use our own <h2>
+                                },
+                            },
+                        }}
+                    />
+                ) : (
+                    <p className="text-center">Loading data for layer {layerId}...</p>
+                )}
+            </div>
         </div>
     );
 };
