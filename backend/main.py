@@ -33,9 +33,9 @@ class Layer:
     valve_state: bool
 
 
-layers: list[Layer] = [Layer(i, f'layer_{5 - i}', False, False) for i in range(5)]  # Current state of the layers.
+layers: list[Layer] = [Layer(i, f'Layer {5 - i}', False, False) for i in range(5)]  # Current state of the layers.
 pump_state = False
-pump_perctentage = 50
+pump_percentage = 50
 light_cycle_on = False
 mixing_cycle_on = False
 
@@ -155,8 +155,8 @@ def switch_valve(id_: int):
 
 @app.post('/pump-power-change/{value_}')
 def pump_power_change(value_: int):
-    global pump_perctentage, pump_state
-    pump_perctentage = value_
+    global pump_percentage, pump_state
+    pump_percentage = value_
 
     if pump_state:
         mqtt_manager.start_pump(value_)
@@ -169,7 +169,7 @@ def toggle_pump():
     global pump_state
     pump_state = not pump_state
     if pump_state:
-        mqtt_manager.start_pump(pump_perctentage)
+        mqtt_manager.start_pump(pump_percentage)
     else:
         mqtt_manager.stop_pump()
 
@@ -235,5 +235,4 @@ def send_message(button_id: int, request: MessageRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     uvicorn.run(app, host="0.0.0.0", port=8000)
