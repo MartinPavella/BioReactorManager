@@ -1,6 +1,5 @@
 import json
 import time
-from dataclasses import dataclass
 from datetime import datetime
 
 from fastapi import FastAPI
@@ -25,8 +24,8 @@ app.add_middleware(
 # Serve images from the static folder
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
 state_file_name = '.current_state.json'
+config_file_name = '.cultivation_config.json'
 
 
 def _get_state() -> dict:
@@ -44,6 +43,21 @@ def _set_state(new_state: dict):
         f.write(data)
 
 
+def _get_config() -> dict:
+    """ Return the current static configuration of the system as a dictionary. """
+    with open(config_file_name, 'r') as f:
+        config = json.load(f)
+
+    return config
+
+
+def _set_config(new_config: dict):
+    """ Save a new static configuration of the system. """
+    data = json.dumps(new_config)
+    with open(config_file_name, 'w') as f:
+        f.write(data)
+
+
 @app.get("/get-state")
 def get_state():
     return _get_state()
@@ -52,6 +66,25 @@ def get_state():
 @app.get("/get-probe-data/{id_}")
 def get_probe_data(id_: int):
     return probe_manager.get_all_readings(id_)
+
+
+class ConfigMeta(BaseModel):
+    light_cycle_start: str
+    light_cycle_end: str
+    probe_reading_period_minutes: int
+    medium_mixing_period_minutes: int
+    medium_mixing_intensity: int
+    medium_mixing_duration_seconds: int
+
+
+@app.post('/set-config')
+def set_config(config: ConfigMeta):
+    _set_config(config.model_dump())
+
+
+@app.get('/get-config')
+def get_config():
+    return _get_config()
 
 
 class HarvestMeta(BaseModel):
@@ -160,7 +193,6 @@ def switch_valve(id_: int):
         mqtt_manager.open_valve(id_)
     else:
         mqtt_manager.close_valve(id_)
-
 
     return {"id_": id_, "new_valve_on": new_valve_on}
 
