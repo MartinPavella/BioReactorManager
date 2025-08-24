@@ -150,9 +150,9 @@ function LowLevelControlsTab() {
                         max="100"
                         value={pumpPower}
                         onChange={(e) => handlePumpPowerChange(Number(e.target.value))}
-                        className="w-full h-3 bg-green-300 accent-green-600 rounded-lg cursor-pointer"
+                        className="slider-thumb"
                     />
-                    <span className="font-bold text-gray-700">{pumpPower}</span>
+                    <span className="text-xl font-bold text-gray-700">{pumpPower}</span>
                 </div>
             </div>
         </div>
