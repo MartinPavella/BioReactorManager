@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 import mqtt_manager
 import probe_manager
+import medium_monitoring_manager
 
 app = FastAPI()
 
@@ -129,6 +130,11 @@ def get_state():
 @app.get("/get-probe-data/{id_}")
 def get_probe_data(id_: int):
     return probe_manager.get_all_readings(id_)
+
+
+@app.get("/get-ph-conductivity-data")
+def get_ph_conductivity_data():
+    return medium_monitoring_manager.get_ph_conductivity_data()
 
 
 class ConfigMeta(BaseModel):
