@@ -75,16 +75,7 @@ function HighLevelControlsTab() {
 
     return (
         <div className="w-full max-w-md space-y-8">
-            {/* Full Harvest Button */}
-            <div>
-                <button
-                    onClick={handleFullHarvestClick}
-                    className="w-full py-8 bg-green-600 text-white text-3xl font-bold rounded-lg shadow-lg hover:bg-green-700"
-                    disabled={loading}
-                >
-                    🌱 Full Harvest
-                </button>
-            </div>
+
 
             {/* Automatic Cultivation */}
             <div>
@@ -105,6 +96,17 @@ function HighLevelControlsTab() {
                     disabled={loading}
                 >
                     💡 Toggle All Lights
+                </button>
+            </div>
+
+            {/* Full Harvest Button */}
+            <div>
+                <button
+                    onClick={handleFullHarvestClick}
+                    className="w-full py-8 bg-green-600 text-white text-3xl font-bold rounded-lg shadow-lg hover:bg-green-700"
+                    disabled={loading}
+                >
+                    🌱 Full Harvest
                 </button>
             </div>
 
