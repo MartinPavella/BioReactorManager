@@ -1,3 +1,4 @@
+import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -25,26 +26,28 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@dataclass
-class Layer:
-    id_: int
-    name: str
-    light_state: bool
-    valve_state: bool
+state_file_name = '.current_state.json'
 
 
-layers: list[Layer] = [Layer(i, f'Layer {5 - i}', False, False) for i in range(5)]  # Current state of the layers.
-pump_state = False
-pump_percentage = 50
-light_cycle_on = False
-mixing_cycle_on = False
+def _get_state() -> dict:
+    """ Return the current state of the system as a dictionary. """
+    with open(state_file_name, 'r') as f:
+        state = json.load(f)
+
+    return state
+
+
+def _set_state(new_state: dict):
+    """ Save a new state of the system. """
+    data = json.dumps(new_state)
+    with open(state_file_name, 'w') as f:
+        f.write(data)
 
 
 @app.get("/get-state")
 def get_state():
-    return [
-        {"id_": l.id_, "name": l.name, "light_state": l.light_state, "valve_state": l.valve_state, } for l in layers
-    ]
+    return _get_state()
+
 
 @app.get("/get-probe-data/{id_}")
 def get_probe_data(id_: int):
@@ -63,38 +66,40 @@ def harvest_layer(id_: int, harvest_meta: HarvestMeta):
 
 @app.post('/blink-control-led')
 def blink_control_led():
+    """ Blink the LED on all connected ESP MCUs, for connection debugging. """
     mqtt_manager.blink_led()
     return []
 
 
 @app.post('/switch-light/{id_}')
 def switch_light(id_: int):
-    new_light_state = not layers[id_].light_state
-    layers[id_].light_state = new_light_state
+    state = _get_state()
 
-    if new_light_state:
+    new_light_on = not state['layers'][id_]['light_on']
+    state['layers'][id_]['light_on'] = new_light_on
+
+    if new_light_on:
         mqtt_manager.light_on(id_)
     else:
         mqtt_manager.light_off(id_)
 
-    return {"id_": id_, "new_light_state": new_light_state}
+    _set_state(state)
+
+    return {"id_": id_, "new_light_on": new_light_on}
 
 
-@app.post('/timer-lights')
-def timer_lights():
-    # TODO Extremely ugly temporary code! - hahah, si na seba moc prísny martin 
-
-    global light_cycle_on
-    if light_cycle_on:
-        return  # Only 1 thread should handle this endpoint.
-    light_cycle_on = True
+@app.post('/toggle-automatic-cultivation')
+def toggle_automatic_cultivation():
+    state = _get_state()
+    state['automatic_cultivation_on'] = not state['automatic_cultivation_on']
+    _set_state(state)
 
     # The lights are on from 6:00 to 21:00.
     start_hour = 6
     end_hour = 21
     time_shift = -2  # The `datetime` for some reason shifts the time to a different time zone.
 
-    while True:
+    while _get_state()['automatic_cultivation_on']:
         if (start_hour + time_shift) <= datetime.now().hour < (end_hour + time_shift):
             for id_ in range(5):
                 mqtt_manager.light_on(id_)
@@ -107,58 +112,68 @@ def timer_lights():
 
 @app.post('/timer-mixing')
 def timer_mixing():
-    global mixing_cycle_on
-    if mixing_cycle_on:
-        return  # Only 1 thread should handle this endpoint.
-    mixing_cycle_on = True
-
-    layer_mixing_time_seconds = 7
-    time_to_fill_pipe_to_layers = [
-        0, 0, 0, 0, 3  # TODO Just 3 seconds for the final layer for now.
-    ]
-    layer_mixing_powers = [
-        63, 66, 69, 72, 75  # TODO Measure precise values.
-    ]
-
-    mixing_period_minutes = 5
-    last_updated_time = datetime.now()
-    while True:
-        if (datetime.now() - last_updated_time).total_seconds() / 60 >= mixing_period_minutes:
-            for layer_id, (mixing_power, time_to_fill_pipe) in enumerate(
-                    zip(layer_mixing_powers, time_to_fill_pipe_to_layers)
-            ):
-                mqtt_manager.open_valve(layer_id)
-                mqtt_manager.start_pump(mixing_power)
-                time.sleep(time_to_fill_pipe + layer_mixing_time_seconds)
-                mqtt_manager.stop_pump()
-                mqtt_manager.close_valve(layer_id)
-
-            mqtt_manager.stop_pump()  # Make sure the pump is not running.
-
-            last_updated_time = datetime.now()  # Record the mixing time.
-
-        time.sleep(10)  # Check once every 10 seconds.
+    # TODO Fuse with `toggle_automatic_cultivation()`.
+    pass
+    # global mixing_cycle_on
+    # if mixing_cycle_on:
+    #     return  # Only 1 thread should handle this endpoint.
+    # mixing_cycle_on = True
+    #
+    # layer_mixing_time_seconds = 7
+    # time_to_fill_pipe_to_layers = [
+    #     0, 0, 0, 0, 3  # TODO Just 3 seconds for the final layer for now.
+    # ]
+    # layer_mixing_powers = [
+    #     63, 66, 69, 72, 75  # TODO Measure precise values.
+    # ]
+    #
+    # mixing_period_minutes = 5
+    # last_updated_time = datetime.now()
+    # while True:
+    #     if (datetime.now() - last_updated_time).total_seconds() / 60 >= mixing_period_minutes:
+    #         for layer_id, (mixing_power, time_to_fill_pipe) in enumerate(
+    #                 zip(layer_mixing_powers, time_to_fill_pipe_to_layers)
+    #         ):
+    #             mqtt_manager.open_valve(layer_id)
+    #             mqtt_manager.start_pump(mixing_power)
+    #             time.sleep(time_to_fill_pipe + layer_mixing_time_seconds)
+    #             mqtt_manager.stop_pump()
+    #             mqtt_manager.close_valve(layer_id)
+    #
+    #         mqtt_manager.stop_pump()  # Make sure the pump is not running.
+    #
+    #         last_updated_time = datetime.now()  # Record the mixing time.
+    #
+    #     time.sleep(10)  # Check once every 10 seconds.
 
 
 @app.post('/switch-valve/{id_}')
 def switch_valve(id_: int):
-    new_valve_state = not layers[id_].valve_state
-    layers[id_].valve_state = new_valve_state
+    state = _get_state()
 
-    if new_valve_state:
+    new_valve_on = not state['layers'][id_]['valve_on']
+    state['layers'][id_]['valve_on'] = new_valve_on
+
+    _set_state(state)
+
+    if new_valve_on:
         mqtt_manager.open_valve(id_)
     else:
         mqtt_manager.close_valve(id_)
 
-    return {"id_": id_, "new_valve_state": new_valve_state}
+
+    return {"id_": id_, "new_valve_on": new_valve_on}
 
 
 @app.post('/pump-power-change/{value_}')
 def pump_power_change(value_: int):
-    global pump_percentage, pump_state
-    pump_percentage = value_
+    state = _get_state()
 
-    if pump_state:
+    state['pump_power'] = value_
+
+    _set_state(state)
+
+    if state['pump_on']:
         mqtt_manager.start_pump(value_)
 
     return {"value": value_}
@@ -166,57 +181,63 @@ def pump_power_change(value_: int):
 
 @app.post('/toggle-pump')
 def toggle_pump():
-    global pump_state
-    pump_state = not pump_state
-    if pump_state:
-        mqtt_manager.start_pump(pump_percentage)
+    state = _get_state()
+
+    state['pump_on'] = not state['pump_on']
+
+    _set_state(state)
+
+    if state['pump_on']:
+        mqtt_manager.start_pump(state['pump_power'])
     else:
         mqtt_manager.stop_pump()
 
-    return {"new_pump_state": pump_state}
+    return {"new_pump_on": state['pump_on']}
 
 
 @app.post('/harvest-all')
 def harvest_all():
-    first_layer_harvest_time = 15
-    layer_harvest_time = 12
-
-    # First, close everything.
-    mqtt_manager.stop_pump()
-    global pump_state
-    pump_state = False
-    for layer in layers:
-        mqtt_manager.close_valve(layer.id_)
-        layer.valve_state = False
-
-    mqtt_manager.open_valve(0)
-    time.sleep(0.5)
-    mqtt_manager.start_pump()
-    time.sleep(first_layer_harvest_time)
-
-    mqtt_manager.open_valve(1)
-    time.sleep(0.5)
-    mqtt_manager.close_valve(0)
-    time.sleep(layer_harvest_time)
-
-    mqtt_manager.open_valve(2)
-    time.sleep(0.5)
-    mqtt_manager.close_valve(1)
-    time.sleep(layer_harvest_time)
-
-    mqtt_manager.open_valve(3)
-    time.sleep(0.5)
-    mqtt_manager.close_valve(2)
-    time.sleep(layer_harvest_time)
-
-    mqtt_manager.open_valve(4)
-    time.sleep(0.5)
-    mqtt_manager.close_valve(3)
-    time.sleep(layer_harvest_time)
-
-    mqtt_manager.stop_pump()
-    time.sleep(1)
-    mqtt_manager.close_valve(4)
+    # TODO Rework!
+    #  Take the `state` into account?
+    # first_layer_harvest_time = 15
+    # layer_harvest_time = 12
+    #
+    # # First, close everything.
+    # mqtt_manager.stop_pump()
+    # global pump_state
+    # pump_state = False
+    # for layer in layers:
+    #     mqtt_manager.close_valve(layer.id_)
+    #     layer.valve_state = False
+    #
+    # mqtt_manager.open_valve(0)
+    # time.sleep(0.5)
+    # mqtt_manager.start_pump()
+    # time.sleep(first_layer_harvest_time)
+    #
+    # mqtt_manager.open_valve(1)
+    # time.sleep(0.5)
+    # mqtt_manager.close_valve(0)
+    # time.sleep(layer_harvest_time)
+    #
+    # mqtt_manager.open_valve(2)
+    # time.sleep(0.5)
+    # mqtt_manager.close_valve(1)
+    # time.sleep(layer_harvest_time)
+    #
+    # mqtt_manager.open_valve(3)
+    # time.sleep(0.5)
+    # mqtt_manager.close_valve(2)
+    # time.sleep(layer_harvest_time)
+    #
+    # mqtt_manager.open_valve(4)
+    # time.sleep(0.5)
+    # mqtt_manager.close_valve(3)
+    # time.sleep(layer_harvest_time)
+    #
+    # mqtt_manager.stop_pump()
+    # time.sleep(1)
+    # mqtt_manager.close_valve(4)
 
     return "Success"
 
@@ -224,12 +245,6 @@ def harvest_all():
 # Data model for receiving button messages
 class MessageRequest(BaseModel):
     message: str
-
-
-# Handle button clicks
-@app.post("/send-message/{button_id}")
-def send_message(button_id: int, request: MessageRequest):
-    return {"response": f"Received '{request.message}' from Button {button_id}"}
 
 
 if __name__ == "__main__":

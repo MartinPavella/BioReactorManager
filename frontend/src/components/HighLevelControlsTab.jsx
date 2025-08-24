@@ -6,26 +6,26 @@ function HighLevelControlsTab() {
 
     const backend_uri = "http://192.168.0.102:8000";
 
-    // --- Effects for fetching backend state ---
+    // Fetch state once and periodically
     useEffect(() => {
-        fetch(backend_uri + "/get-state")
-            .then((response) => response.json())
-            .then((data) => setLayers(data))
-            .catch((error) => console.error("Error fetching layer data:", error));
-    }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
+        const fetchState = () => {
             fetch(backend_uri + "/get-state")
-                .then((response) => response.json())
-                .then((data) => setLayers(data))
-                .catch((error) => console.error("Error fetching layer data:", error));
-        }, 5000);
+                .then((res) => res.json())
+                .then((data) => {
+                    setLayers(data.layers || []);
+                })
+                .catch((err) => console.error("Error fetching state:", err));
+        };
+
+        fetchState();
+        const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
     }, []);
 
     // --- Handlers ---
     const handleFullHarvestClick = () => {
+        // TODO Not working currently!
+
         if (loading) return;
         setLoading(true);
         fetch(backend_uri + "/harvest-all", {method: "POST"})
@@ -38,11 +38,11 @@ function HighLevelControlsTab() {
     };
 
     const handleAutoCultivationToggle = () => {
-        if (loading) return;
+        if (loading) return;  // TODO DELETE
         setLoading(true);
         fetch(backend_uri + "/toggle-auto", {method: "POST"})
             .then((response) => response.json())
-            .then(() => setLoading(false))
+            .then(() => setLoading(false))// TODO DELETE
             .catch((error) => {
                 setLoading(false);
                 console.error("Error toggling auto cultivation:", error);
