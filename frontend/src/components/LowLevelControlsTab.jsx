@@ -10,16 +10,19 @@ function LowLevelControlsTab() {
     // keep debounce timeout in ref so it persists across renders
     const debounceTimeout = useRef(null);
 
+    function updateFromBackendState(backend_state) {
+        // Update the UI components based on the given state of the backend.
+        setLayers(backend_state.layers || []);
+        setPumpOn(backend_state.pump_on);
+        setPumpPower(backend_state.pump_power);
+    }
+
     // Fetch state once and periodically
     useEffect(() => {
         const fetchState = () => {
             fetch(backend_uri + "/get-state")
                 .then((res) => res.json())
-                .then((data) => {
-                    setLayers(data.layers || []);
-                    setPumpOn(data.pump_on ?? false);
-                    setPumpPower(data.pump_power ?? 50);
-                })
+                .then(updateFromBackendState)
                 .catch((err) => console.error("Error fetching state:", err));
         };
 
@@ -83,6 +86,19 @@ function LowLevelControlsTab() {
                 .then((res) => res.json())
                 .catch((err) => console.error("Error setting pump power:", err));
         }, 300); // send only after 300ms of no changes
+    };
+
+    const handleFailSafe = () => {
+        if (loading) return;
+        setLoading(true);
+        fetch(backend_uri + "/turn-everything-off", {method: "POST"})
+            .then((response) => response.json())
+            .then(updateFromBackendState)
+            .then(() => setLoading(false))
+            .catch((error) => {
+                setLoading(false);
+                console.error("Error turning everything off:", error);
+            });
     };
 
     // --- UI ---
@@ -154,6 +170,17 @@ function LowLevelControlsTab() {
                     />
                     <span className="text-xl font-bold text-gray-700">{pumpPower}</span>
                 </div>
+            </div>
+
+            {/* Fail-safe button */}
+            <div>
+                <button
+                    onClick={handleFailSafe}
+                    className="w-full py-8 bg-red-600 text-white text-2xl font-bold rounded-lg shadow-lg hover:bg-red-700"
+                    disabled={loading}
+                >
+                    🚨 Turn everything OFF
+                </button>
             </div>
         </div>
     );
