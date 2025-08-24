@@ -3,54 +3,52 @@
 @tailwind utilities;
 
 
-.logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
+/* Base slider track */
+.slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px; /* thickness of the line */
+    background: #bbf7d0; /* Tailwind green-200 */
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
 }
 
-.logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
+/* WebKit (Chrome, Safari, Edge) track */
+.slider-thumb::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #bbf7d0; /* Tailwind green-200 */
+    border-radius: 4px;
 }
 
-.logo.react:hover {
-    filter: drop-shadow(0 0 2em #61dafbaa);
+/* Firefox track */
+.slider-thumb::-moz-range-track {
+    height: 6px;
+    background: #bbf7d0; /* Tailwind green-200 */
+    border-radius: 4px;
 }
 
-@keyframes logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Thumb (the draggable ball) */
+.slider-thumb::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px; /* larger ball */
+    height: 32px; /* larger ball */
+    border-radius: 50%;
+    background: #16a34a; /* Tailwind green-600 */
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
+    margin-top: -13px; /* centers the larger thumb on track */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    a:nth-of-type(2) .logo {
-        animation: logo-spin infinite 20s linear;
-    }
-}
-
-.card {
-    padding: 2em;
-}
-
-.read-the-docs {
-    color: #888;
-}
-
-
-.teal-text {
-    color: #0a8eb3;
-}
-
-.grey-text {
-    color: #53595e;
-}
-
-.slider {
-    width: 300px;
-    height: 50px;
+.slider-thumb::-moz-range-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #16a34a;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.4);
 }
