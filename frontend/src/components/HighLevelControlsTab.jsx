@@ -4,7 +4,7 @@ function HighLevelControlsTab() {
     const [layers, setLayers] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    const backend_uri = "http://192.168.0.102:8000";
+    const backend_uri = "http://bioreactor.local:8000";
 
     // Fetch state once and periodically
     useEffect(() => {
