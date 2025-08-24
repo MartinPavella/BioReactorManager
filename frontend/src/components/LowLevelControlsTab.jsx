@@ -176,7 +176,7 @@ function LowLevelControlsTab() {
             <div>
                 <button
                     onClick={handleFailSafe}
-                    className="w-full py-8 bg-red-600 text-white text-2xl font-bold rounded-lg shadow-lg hover:bg-red-700"
+                    className="w-full py-6 border-2 border-red-600 text-red-700 text-2xl font-bold rounded-lg hover:bg-red-100"
                     disabled={loading}
                 >
                     🚨 Turn everything OFF
