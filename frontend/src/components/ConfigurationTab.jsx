@@ -6,6 +6,7 @@ function ConfigurationTab() {
     const [lightStart, setLightStart] = useState("05:00");
     const [lightEnd, setLightEnd] = useState("21:00");
     const [probePeriod, setProbePeriod] = useState(60);
+    const [mediumPeriod, setMediumPeriod] = useState(60);
     const [mixingPeriod, setMixingPeriod] = useState(10);
     const [mixingIntensity, setMixingIntensity] = useState(50);
     const [mixingDuration, setMixingDuration] = useState(5);
@@ -19,6 +20,7 @@ function ConfigurationTab() {
                 setLightStart(data.light_cycle_start || "05:00");
                 setLightEnd(data.light_cycle_end || "21:00");
                 setProbePeriod(data.probe_reading_period_minutes || 60);
+                setMediumPeriod(data.medium_reading_period_minutes || 60);
                 setMixingPeriod(data.medium_mixing_period_minutes || 10);
                 setMixingIntensity(data.medium_mixing_intensity || 50);
                 setMixingDuration(data.medium_mixing_duration_seconds || 5);
@@ -38,6 +40,7 @@ function ConfigurationTab() {
             light_cycle_start: lightStart,
             light_cycle_end: lightEnd,
             probe_reading_period_minutes: probePeriod,
+            medium_reading_period_minutes: mediumPeriod,
             medium_mixing_period_minutes: mixingPeriod,
             medium_mixing_intensity: mixingIntensity,
             medium_mixing_duration_seconds: mixingDuration,
@@ -84,16 +87,27 @@ function ConfigurationTab() {
                 </div>
             </div>
 
-            {/* Probe readings */}
+            {/* Sensor readings */}
             <div className="bg-white p-6 rounded-lg shadow space-y-2">
-                <h3 className="text-lg font-semibold">Probe Readings</h3>
+                <h3 className="text-lg font-semibold">Sensor Readings</h3>
                 <label className="flex items-center space-x-2">
-                    <span>Period (minutes):</span>
+                    <span>PROBE reading period (minutes):</span>
                     <input
                         type="number"
                         min="1" step="1"
                         value={probePeriod}
                         onChange={(e) => setProbePeriod(enforcePositiveInt(e.target.value, probePeriod))}
+                        className="border rounded p-2 w-24"
+                    />
+                </label>
+
+                <label className="flex items-center space-x-2">
+                    <span>Medium reading period (minutes):</span>
+                    <input
+                        type="number"
+                        min="1" step="1"
+                        value={mediumPeriod}
+                        onChange={(e) => setMediumPeriod(enforcePositiveInt(e.target.value, mediumPeriod))}
                         className="border rounded p-2 w-24"
                     />
                 </label>
