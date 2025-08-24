@@ -184,6 +184,26 @@ def switch_light(id_: int):
     return {"id_": id_, "new_light_on": new_light_on}
 
 
+@app.post('/all-lights-on')
+def all_lights_on():
+    state = State.get()
+    for id_, layer in enumerate(state['layers']):
+        layer['light_on'] = True
+        mqtt_manager.light_on(id_)  # TODO Replace by single MQTT call for all lights.
+
+    State.set(state)
+
+
+@app.post('/all-lights-off')
+def all_lights_off():
+    state = State.get()
+    for id_, layer in enumerate(state['layers']):
+        layer['light_on'] = False
+        mqtt_manager.light_off(id_)  # TODO Replace by single MQTT call for all lights.
+
+    State.set(state)
+
+
 @app.post('/toggle-automatic-cultivation')
 def toggle_automatic_cultivation():
     state = State.get()

@@ -54,15 +54,27 @@ function HighLevelControlsTab() {
             });
     };
 
-    const handleAllLightsToggle = () => {
+    const handleAllLightsOn = () => {
         if (loading) return;
         setLoading(true);
-        fetch(backend_uri + "/toggle-all-lights", {method: "POST"})
+        fetch(backend_uri + "/all-lights-on", {method: "POST"})
             .then((response) => response.json())
             .then(() => setLoading(false))
             .catch((error) => {
                 setLoading(false);
-                console.error("Error toggling all lights:", error);
+                console.error("Error turning all lights ON:", error);
+            });
+    };
+
+    const handleAllLightsOff = () => {
+        if (loading) return;
+        setLoading(true);
+        fetch(backend_uri + "/all-lights-off", {method: "POST"})
+            .then((response) => response.json())
+            .then(() => setLoading(false))
+            .catch((error) => {
+                setLoading(false);
+                console.error("Error turning all lights OFF:", error);
             });
     };
 
@@ -93,15 +105,25 @@ function HighLevelControlsTab() {
                 </button>
             </div>
 
-            {/* All Lights Toggle */}
-            <div>
-                <button
-                    onClick={handleAllLightsToggle}
-                    className="w-full py-6 bg-yellow-500 text-white text-2xl font-semibold rounded-lg shadow-md hover:bg-yellow-600"
-                    disabled={loading}
-                >
-                    💡 Toggle All Lights
-                </button>
+            {/* All Lights Controls */}
+            <div className="space-y-6">
+                {/* On/Off buttons side by side */}
+                <div className="flex space-x-4">
+                    <button
+                        onClick={handleAllLightsOn}
+                        className="flex-1 py-6 bg-yellow-500 text-white text-2xl font-semibold rounded-lg shadow-md hover:bg-yellow-600"
+                        disabled={loading}
+                    >
+                        ☀ Lights ON
+                    </button>
+                    <button
+                        onClick={handleAllLightsOff}
+                        className="flex-1 py-6 bg-gray-500 text-white text-2xl font-semibold rounded-lg shadow-md hover:bg-gray-600"
+                        disabled={loading}
+                    >
+                        🌑 Lights OFF
+                    </button>
+                </div>
             </div>
 
             {/* Full Harvest Button */}
