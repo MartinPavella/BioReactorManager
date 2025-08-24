@@ -1,4 +1,6 @@
 import json
+import logging
+import threading
 import time
 from datetime import datetime
 
@@ -28,19 +30,47 @@ state_file_name = '.current_state.json'
 config_file_name = '.cultivation_config.json'
 
 
-def _get_state() -> dict:
-    """ Return the current state of the system as a dictionary. """
-    with open(state_file_name, 'r') as f:
-        state = json.load(f)
+class AutomaticCultivation:
+    thread_access_mutex: threading.Lock = threading.Lock()
+    automatic_cultivation_thread: threading.Thread | None = None
 
-    return state
+    @classmethod
+    def get_current_thread(cls) -> threading.Thread:
+        cls.thread_access_mutex.acquire()
+        current_thread = cls.automatic_cultivation_thread
+        cls.thread_access_mutex.release()
+
+        return current_thread
+
+    @classmethod
+    def set_current_thread(cls, thread: threading.Thread | None):
+        cls.thread_access_mutex.acquire()
+        cls.automatic_cultivation_thread = thread
+        cls.thread_access_mutex.release()
 
 
-def _set_state(new_state: dict):
-    """ Save a new state of the system. """
-    data = json.dumps(new_state)
-    with open(state_file_name, 'w') as f:
-        f.write(data)
+class State:
+    file_access_mutex: threading.Lock = threading.Lock()
+
+    @classmethod
+    def get(cls) -> dict:
+        """ Return the current state of the system as a dictionary. """
+        cls.file_access_mutex.acquire()
+        with open(state_file_name, 'r') as f:
+            state = json.load(f)
+        cls.file_access_mutex.release()
+
+        return state
+
+    @classmethod
+    def set(cls, new_state: dict):
+        """ Save a new state of the system. """
+        data = json.dumps(new_state)
+
+        cls.file_access_mutex.acquire()
+        with open(state_file_name, 'w') as f:
+            f.write(data)
+        cls.file_access_mutex.release()
 
 
 def _get_config() -> dict:
@@ -58,9 +88,42 @@ def _set_config(new_config: dict):
         f.write(data)
 
 
+def _run_automatic_cultivation():
+    """ Run the automatic cultivation in a separate thread, as long as `State.get()['automatic_cultivation']`
+         is True.
+     """
+    # TODO The lights are on from 6:00 to 21:00.
+    start_hour = 6
+    end_hour = 21
+    time_shift = -2  # The `datetime` for some reason shifts the time to a different time zone.
+
+    continue_running = True
+    while State.get()['automatic_cultivation_on'] and continue_running:
+        if (start_hour + time_shift) <= datetime.now().hour < (end_hour + time_shift):
+            logging.info(f"Automatic Cultivation: lights ON ({threading.current_thread().name}).")
+            for id_ in range(5):
+                mqtt_manager.light_on(id_)
+        else:
+            logging.info(f"Automatic Cultivation: lights OFF ({threading.current_thread().name}).")
+            for id_ in range(5):
+                mqtt_manager.light_off(id_)
+
+        # Check whether this thread should be killed every second, and check if the lights should be switched on/off
+        #  evert 10 seconds.
+        for _ in range(10):
+            if threading.current_thread() is not AutomaticCultivation.get_current_thread():
+                # Exit the infinite loop.
+                logging.info(f"Automatic Cultivation: Terminating condition ({threading.current_thread().name}).")
+                continue_running = False
+                break
+            else:
+                # Try again in a second.
+                time.sleep(1)
+
+
 @app.get("/get-state")
 def get_state():
-    return _get_state()
+    return State.get()
 
 
 @app.get("/get-probe-data/{id_}")
@@ -106,7 +169,7 @@ def blink_control_led():
 
 @app.post('/switch-light/{id_}')
 def switch_light(id_: int):
-    state = _get_state()
+    state = State.get()
 
     new_light_on = not state['layers'][id_]['light_on']
     state['layers'][id_]['light_on'] = new_light_on
@@ -116,31 +179,31 @@ def switch_light(id_: int):
     else:
         mqtt_manager.light_off(id_)
 
-    _set_state(state)
+    State.set(state)
 
     return {"id_": id_, "new_light_on": new_light_on}
 
 
 @app.post('/toggle-automatic-cultivation')
 def toggle_automatic_cultivation():
-    state = _get_state()
+    state = State.get()
     state['automatic_cultivation_on'] = not state['automatic_cultivation_on']
-    _set_state(state)
+    State.set(state)
 
-    # The lights are on from 6:00 to 21:00.
-    start_hour = 6
-    end_hour = 21
-    time_shift = -2  # The `datetime` for some reason shifts the time to a different time zone.
+    if state['automatic_cultivation_on']:
+        # Start the automatic cultivation in a separate thread. There is always just a single thread running the
+        #  automatic cultivation.
+        logging.info('Automatic cultivation started.')
+        new_thread = threading.Thread(target=_run_automatic_cultivation)
+        AutomaticCultivation.set_current_thread(new_thread)
+        new_thread.start()
 
-    while _get_state()['automatic_cultivation_on']:
-        if (start_hour + time_shift) <= datetime.now().hour < (end_hour + time_shift):
-            for id_ in range(5):
-                mqtt_manager.light_on(id_)
-        else:
-            for id_ in range(5):
-                mqtt_manager.light_off(id_)
+    else:
+        # Terminate the running thread.
+        logging.info('Automatic cultivation stopped.')
+        AutomaticCultivation.set_current_thread(None)
 
-        time.sleep(10)  # Check once every 10 seconds.
+    return {'new_automatic_cultivation_on': state['automatic_cultivation_on']}
 
 
 @app.post('/timer-mixing')
@@ -182,12 +245,12 @@ def timer_mixing():
 
 @app.post('/switch-valve/{id_}')
 def switch_valve(id_: int):
-    state = _get_state()
+    state = State.get()
 
     new_valve_on = not state['layers'][id_]['valve_on']
     state['layers'][id_]['valve_on'] = new_valve_on
 
-    _set_state(state)
+    State.set(state)
 
     if new_valve_on:
         mqtt_manager.open_valve(id_)
@@ -199,11 +262,11 @@ def switch_valve(id_: int):
 
 @app.post('/pump-power-change/{value_}')
 def pump_power_change(value_: int):
-    state = _get_state()
+    state = State.get()
 
     state['pump_power'] = value_
 
-    _set_state(state)
+    State.set(state)
 
     if state['pump_on']:
         mqtt_manager.start_pump(value_)
@@ -213,11 +276,11 @@ def pump_power_change(value_: int):
 
 @app.post('/toggle-pump')
 def toggle_pump():
-    state = _get_state()
+    state = State.get()
 
     state['pump_on'] = not state['pump_on']
 
-    _set_state(state)
+    State.set(state)
 
     if state['pump_on']:
         mqtt_manager.start_pump(state['pump_power'])
