@@ -1,0 +1,37 @@
+{
+  "pump_power": 70,
+  "pump_on": false,
+  "automatic_cultivation_on": false,
+  "layers": [
+    {
+      "id_": 0,
+      "name": "Layer 5",
+      "light_on": false,
+      "valve_on": false
+    },
+    {
+      "id_": 1,
+      "name": "Layer 4",
+      "light_on": false,
+      "valve_on": false
+    },
+    {
+      "id_": 2,
+      "name": "Layer 3",
+      "light_on": false,
+      "valve_on": false
+    },
+    {
+      "id_": 3,
+      "name": "Layer 2",
+      "light_on": false,
+      "valve_on": false
+    },
+    {
+      "id_": 4,
+      "name": "Layer 1",
+      "light_on": false,
+      "valve_on": false
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import {useEffect, useRef, useState} from "react";
 
 function LowLevelControlsTab() {
     const [layers, setLayers] = useState([]);
-    const [pumpState, setPumpState] = useState(false);
+    const [pumpOn, setPumpOn] = useState(false);
     const [pumpPower, setPumpPower] = useState(50);
     const [loading, setLoading] = useState(false);
     const backend_uri = "http://192.168.0.102:8000";
@@ -16,11 +16,9 @@ function LowLevelControlsTab() {
             fetch(backend_uri + "/get-state")
                 .then((res) => res.json())
                 .then((data) => {
-                    setLayers(data);
-                    // TODO
-                    // setLayers(data.layers || []);
-                    // setPumpState(data.pump_state ?? false);
-                    // setPumpPower(data.pump_power ?? 50);
+                    setLayers(data.layers || []);
+                    setPumpOn(data.pump_on ?? false);
+                    setPumpPower(data.pump_power ?? 50);
                 })
                 .catch((err) => console.error("Error fetching state:", err));
         };
@@ -40,7 +38,7 @@ function LowLevelControlsTab() {
                 setLayers((prev) =>
                     prev.map((layer) =>
                         layer.id_ === id
-                            ? {...layer, valve_state: data.new_valve_state}
+                            ? {...layer, valve_on: data.new_valve_on}
                             : layer
                     )
                 );
@@ -57,7 +55,7 @@ function LowLevelControlsTab() {
                 setLayers((prev) =>
                     prev.map((layer) =>
                         layer.id_ === id
-                            ? {...layer, light_state: data.new_light_state}
+                            ? {...layer, light_on: data.new_light_on}
                             : layer
                     )
                 );
@@ -70,7 +68,7 @@ function LowLevelControlsTab() {
         setLoading(true);
         fetch(backend_uri + "/toggle-pump", {method: "POST"})
             .then((res) => res.json())
-            .then((data) => setPumpState(data.new_pump_state))
+            .then((data) => setPumpOn(data.new_pump_on))
             .finally(() => setLoading(false));
     };
 
@@ -107,7 +105,7 @@ function LowLevelControlsTab() {
                             <label className="flex items-center space-x-2">
                                 <input
                                     type="checkbox"
-                                    checked={layer.valve_state}
+                                    checked={layer.valve_on}
                                     onChange={() => handleValveToggle(layer.id_)}
                                     disabled={loading}
                                     className="w-6 h-6 accent-green-600"
@@ -119,7 +117,7 @@ function LowLevelControlsTab() {
                             <label className="flex items-center space-x-2">
                                 <input
                                     type="checkbox"
-                                    checked={layer.light_state}
+                                    checked={layer.light_on}
                                     onChange={() => handleLightToggle(layer.id_)}
                                     disabled={loading}
                                     className="w-6 h-6 accent-yellow-500"
@@ -137,7 +135,7 @@ function LowLevelControlsTab() {
                 disabled={loading}
                 className="w-full py-4 bg-green-600 text-white text-xl rounded-lg shadow hover:bg-green-700"
             >
-                {pumpState ? "⏹ Stop Pump" : "▶ Run Pump"}
+                {pumpOn ? "⏹ Stop Pump" : "▶ Run Pump"}
             </button>
 
             {/* Pump power slider */}
