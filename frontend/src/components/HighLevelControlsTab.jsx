@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 
+
 function HighLevelControlsTab() {
     const [layers, setLayers] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -7,15 +8,18 @@ function HighLevelControlsTab() {
 
     const backend_uri = "http://bioreactor.local:8000";
 
+    function updateFromBackendState(backend_state) {
+        // Update the UI components based on the given state of the backend.
+        setLayers(backend_state.layers || []);
+        setAutomaticCultivationOn(backend_state.automatic_cultivation_on);
+    }
+
     // Fetch state once and periodically
     useEffect(() => {
         const fetchState = () => {
             fetch(backend_uri + "/get-state")
                 .then((res) => res.json())
-                .then((data) => {
-                    setLayers(data.layers || []);
-                    setAutomaticCultivationOn(data.automatic_cultivation_on);
-                })
+                .then(updateFromBackendState)
                 .catch((err) => console.error("Error fetching state:", err));
         };
 
@@ -78,6 +82,19 @@ function HighLevelControlsTab() {
             });
     };
 
+    const handleFailSafe = () => {
+        if (loading) return;
+        setLoading(true);
+        fetch(backend_uri + "/turn-everything-off", {method: "POST"})
+            .then((response) => response.json())
+            .then(updateFromBackendState)
+            .then(() => setLoading(false))
+            .catch((error) => {
+                setLoading(false);
+                console.error("Error turning everything off:", error);
+            });
+    };
+
     const handleHarvestLayer = (id) => {
         if (loading) return;
         setLoading(true);
@@ -134,6 +151,17 @@ function HighLevelControlsTab() {
                     disabled={loading}
                 >
                     🌱 Full Harvest
+                </button>
+            </div>
+
+            {/* Fail-safe button */}
+            <div>
+                <button
+                    onClick={handleFailSafe}
+                    className="w-full py-8 bg-red-600 text-white text-2xl font-bold rounded-lg shadow-lg hover:bg-red-700"
+                    disabled={loading}
+                >
+                    🚨 Turn everything OFF
                 </button>
             </div>
 
