@@ -204,6 +204,28 @@ def all_lights_off():
     State.set(state)
 
 
+@app.post('/turn-everything-off')
+def turn_everything_off():
+    # Automatic cultivation off.
+    AutomaticCultivation.set_current_thread(None)
+    state = State.get()
+    state['automatic_cultivation_on'] = False
+
+    state['pump_on'] = False
+    mqtt_manager.stop_pump()  # Pump off.
+
+    # Turn off all valves.
+    for id_, layer in enumerate(state['layers']):
+        layer['valve_on'] = False
+        layer['light_on'] = False
+        mqtt_manager.close_valve(id_)  # TODO Replace by single MQTT call for all valves.
+        mqtt_manager.light_off(id_)  # TODO Replace by single MQTT call for all valves.
+
+    State.set(state)
+
+    return state
+
+
 @app.post('/toggle-automatic-cultivation')
 def toggle_automatic_cultivation():
     state = State.get()
