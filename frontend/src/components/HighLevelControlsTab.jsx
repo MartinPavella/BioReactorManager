@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 function HighLevelControlsTab() {
     const [layers, setLayers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [automaticCultivationOn, setAutomaticCultivationOn] = useState(false);
 
     const backend_uri = "http://bioreactor.local:8000";
 
@@ -13,6 +14,7 @@ function HighLevelControlsTab() {
                 .then((res) => res.json())
                 .then((data) => {
                     setLayers(data.layers || []);
+                    setAutomaticCultivationOn(data.automatic_cultivation_on);
                 })
                 .catch((err) => console.error("Error fetching state:", err));
         };
@@ -38,11 +40,14 @@ function HighLevelControlsTab() {
     };
 
     const handleAutoCultivationToggle = () => {
-        if (loading) return;  // TODO DELETE
+        if (loading) return;
         setLoading(true);
-        fetch(backend_uri + "/toggle-auto", {method: "POST"})
+        fetch(backend_uri + "/toggle-automatic-cultivation", {method: "POST"})
             .then((response) => response.json())
-            .then(() => setLoading(false))// TODO DELETE
+            .then((data) => {
+                setAutomaticCultivationOn(data.new_automatic_cultivation_on)
+            })
+            .then(() => setLoading(false))
             .catch((error) => {
                 setLoading(false);
                 console.error("Error toggling auto cultivation:", error);
@@ -84,7 +89,7 @@ function HighLevelControlsTab() {
                     className="w-full py-6 bg-blue-600 text-white text-2xl font-semibold rounded-lg shadow-md hover:bg-blue-700"
                     disabled={loading}
                 >
-                    🔄 Toggle Auto Cultivation
+                    <b>{automaticCultivationOn ? "⏹ STOP" : "▶ START"}</b> Autonomous Cultivation
                 </button>
             </div>
 
@@ -103,7 +108,7 @@ function HighLevelControlsTab() {
             <div>
                 <button
                     onClick={handleFullHarvestClick}
-                    className="w-full py-8 bg-green-600 text-white text-3xl font-bold rounded-lg shadow-lg hover:bg-green-700"
+                    className="w-full py-8 bg-green-600 text-white text-2xl font-bold rounded-lg shadow-lg hover:bg-green-700"
                     disabled={loading}
                 >
                     🌱 Full Harvest
