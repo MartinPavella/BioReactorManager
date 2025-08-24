@@ -2,6 +2,7 @@ import React, {useState} from "react";
 import ChartsTab from "./components/ChartsTab.jsx";
 import HighLevelControlsTab from "./components/HighLevelControlsTab.jsx";
 import LowLevelControlsTab from "./components/LowLevelControlsTab.jsx";
+import ConfigurationTab from "./components/ConfigurationTab.jsx";
 import "./App.css";
 
 const App = () => {
@@ -24,7 +25,7 @@ const App = () => {
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
-                    High Level
+                    Home
                 </button>
                 <button
                     onClick={() => setActiveTab("charts")}
@@ -34,7 +35,7 @@ const App = () => {
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
-                    Charts
+                    Monitor
                 </button>
                 <button
                     onClick={() => setActiveTab("lowlevel")}
@@ -44,7 +45,17 @@ const App = () => {
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
-                    Low Level
+                    Fine controls
+                </button>
+                <button
+                    onClick={() => setActiveTab("config")}
+                    className={`flex-1 py-3 text-lg font-semibold transition-colors ${
+                        activeTab === "config"
+                            ? "bg-green-600 text-white"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    } rounded-t-md`}
+                >
+                    Config
                 </button>
             </div>
 
@@ -53,6 +64,7 @@ const App = () => {
                 {activeTab === "highlevel" && <HighLevelControlsTab/>}
                 {activeTab === "charts" && <ChartsTab/>}
                 {activeTab === "lowlevel" && <LowLevelControlsTab/>}
+                {activeTab === "config" && <ConfigurationTab/>}
             </div>
         </div>
     );
