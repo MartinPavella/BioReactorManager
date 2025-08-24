@@ -21,7 +21,7 @@ const App = () => {
                     onClick={() => setActiveTab("highlevel")}
                     className={`flex-1 py-3 text-lg font-semibold transition-colors ${
                         activeTab === "highlevel"
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-600 text-white hover:bg-green-700"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
@@ -31,7 +31,7 @@ const App = () => {
                     onClick={() => setActiveTab("charts")}
                     className={`flex-1 py-3 text-lg font-semibold transition-colors ${
                         activeTab === "charts"
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-600 text-white hover:bg-green-700"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
@@ -41,7 +41,7 @@ const App = () => {
                     onClick={() => setActiveTab("lowlevel")}
                     className={`flex-1 py-3 text-lg font-semibold transition-colors ${
                         activeTab === "lowlevel"
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-600 text-white hover:bg-green-700"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
@@ -51,7 +51,7 @@ const App = () => {
                     onClick={() => setActiveTab("config")}
                     className={`flex-1 py-3 text-lg font-semibold transition-colors ${
                         activeTab === "config"
-                            ? "bg-green-600 text-white"
+                            ? "bg-green-600 text-white hover:bg-green-700"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     } rounded-t-md`}
                 >
