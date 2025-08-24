@@ -12,7 +12,7 @@ import {
 } from "chart.js";
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
-const backend_uri = "http://192.168.0.102:8000";
+const backend_uri = "http://bioreactor.local:8000";
 
 const LineChart = ({layerId}) => {
     const [chartData, setChartData] = useState(null);

@@ -5,7 +5,7 @@ function LowLevelControlsTab() {
     const [pumpOn, setPumpOn] = useState(false);
     const [pumpPower, setPumpPower] = useState(50);
     const [loading, setLoading] = useState(false);
-    const backend_uri = "http://192.168.0.102:8000";
+    const backend_uri = "http://bioreactor.local:8000";
 
     // keep debounce timeout in ref so it persists across renders
     const debounceTimeout = useRef(null);
