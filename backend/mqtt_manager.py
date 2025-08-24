@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime
 
 import numpy as np
 import paho.mqtt.client as mqtt
@@ -49,10 +50,11 @@ def on_message(client, userdata, message):
 
     # Classify the message and react accordingly.
     if msg[:6] == 'PROBE[':
+        # TODO The probe data should not be sent automatically. The server should request the data everytime.
         # Data submitted from PROBE reading. The format is: "PROBE[<layer_id>]:<read_value>"
         layer = int(msg[6])
         value = int(msg[9:])
-        probe_manager.log_reading(layer, value)
+        probe_manager.log_probe_reading(layer, probe_manager.ProbeReading(datetime.now(), value))
 
 
 def on_publish(client, userdata, mid):
@@ -94,10 +96,12 @@ def start_pump(value):
     logging.info(command)
     client.publish(send_to_pump_esp_topic(), command)
 
+
 def stop_pump():
     command = 'stop_pump'
     logging.info(command)
     client.publish(send_to_pump_esp_topic(), command)
+
 
 def harvest_layer(layer_id: int, duration_seconds: int):
     logging.info(f'START harvesting layer {layer_id}.')
@@ -108,7 +112,6 @@ def harvest_layer(layer_id: int, duration_seconds: int):
     time.sleep(1)  # Prevent pressure spikes.
     close_valve(layer_id)
     logging.info(f'STOP harvesting layer {layer_id}.')
-
 
 
 client = mqtt.Client('ClientA', False)  # create client object
