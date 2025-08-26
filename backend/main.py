@@ -3,15 +3,16 @@ import logging
 import threading
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import medium_monitoring_manager
 import mqtt_manager
 import probe_manager
-import medium_monitoring_manager
 
 app = FastAPI()
 
@@ -50,6 +51,7 @@ class AutomaticCultivation:
         cls.thread_access_mutex.release()
 
 
+# noinspection DuplicatedCode
 class State:
     file_access_mutex: threading.Lock = threading.Lock()
 
@@ -74,40 +76,91 @@ class State:
         cls.file_access_mutex.release()
 
 
-def _get_config() -> dict:
-    """ Return the current static configuration of the system as a dictionary. """
-    with open(config_file_name, 'r') as f:
-        config = json.load(f)
+# noinspection DuplicatedCode
+class Config:
+    file_access_mutex: threading.Lock = threading.Lock()
 
-    return config
+    @classmethod
+    def get(cls) -> dict:
+        """ Return the current static configuration of the system as a dictionary. """
+        cls.file_access_mutex.acquire()
+        with open(config_file_name, 'r') as f:
+            config = json.load(f)
+        cls.file_access_mutex.release()
+
+        return config
+
+    @classmethod
+    def set(cls, new_config: dict):
+        """ Save a new static configuration of the system. """
+        data = json.dumps(new_config)
+
+        cls.file_access_mutex.acquire()
+        with open(config_file_name, 'w') as f:
+            f.write(data)
+        cls.file_access_mutex.release()
 
 
-def _set_config(new_config: dict):
-    """ Save a new static configuration of the system. """
-    data = json.dumps(new_config)
-    with open(config_file_name, 'w') as f:
-        f.write(data)
+class ConfigMeta(BaseModel):
+    light_cycle_start: str  # Uses the format "HH:MM".
+    light_cycle_end: str  # Uses the format "HH:MM".
+    probe_reading_period_minutes: int
+    medium_mixing_period_minutes: int
+    medium_mixing_intensity: int
+    medium_mixing_duration_seconds: int
+
+
+@app.post('/set-config')
+def set_config(config: ConfigMeta):
+    Config.set(config.model_dump())
+
+
+@app.get('/get-config')
+def get_config():
+    return Config.get()
 
 
 def _run_automatic_cultivation():
     """ Run the automatic cultivation in a separate thread, as long as `State.get()['automatic_cultivation']`
          is True.
      """
-    # TODO The lights are on from 6:00 to 21:00.
-    start_hour = 6
-    end_hour = 21
-    time_shift = -2  # The `datetime` for some reason shifts the time to a different time zone.
+    time_zone = "Europe/Prague"
 
     continue_running = True
     while State.get()['automatic_cultivation_on'] and continue_running:
-        if (start_hour + time_shift) <= datetime.now().hour < (end_hour + time_shift):
+        # Decode the start and end time from the config. They use the format "HH:MM".
+        start_time = datetime.strptime(Config.get()['light_cycle_start'], '%H:%M').time()
+        end_time = datetime.strptime(Config.get()['light_cycle_end'], '%H:%M').time()
+
+        now = datetime.now(ZoneInfo(time_zone)).time()
+
+        if start_time < now < end_time:
+            # The lights should be ON.
             logging.info(f"Automatic Cultivation: lights ON ({threading.current_thread().name}).")
+
+            # TODO Replace with a single MQTT message.
             for id_ in range(5):
                 mqtt_manager.light_on(id_)
+
+            # Record that the lights are on in the `State`.
+            state = State.get()
+            for layer in state['layers']:
+                layer['light_on'] = True
+            State.set(state)
+
         else:
+            # The lights should be OFF.
             logging.info(f"Automatic Cultivation: lights OFF ({threading.current_thread().name}).")
+
+            # TODO Replace with a single MQTT message.
             for id_ in range(5):
                 mqtt_manager.light_off(id_)
+
+            # Record that the lights are off in the `State`.
+            state = State.get()
+            for layer in state['layers']:
+                layer['light_on'] = False
+            State.set(state)
 
         # Check whether this thread should be killed every second, and check if the lights should be switched on/off
         #  evert 10 seconds.
@@ -135,25 +188,6 @@ def get_probe_data(id_: int):
 @app.get("/get-ph-conductivity-data")
 def get_ph_conductivity_data():
     return medium_monitoring_manager.get_ph_conductivity_data()
-
-
-class ConfigMeta(BaseModel):
-    light_cycle_start: str
-    light_cycle_end: str
-    probe_reading_period_minutes: int
-    medium_mixing_period_minutes: int
-    medium_mixing_intensity: int
-    medium_mixing_duration_seconds: int
-
-
-@app.post('/set-config')
-def set_config(config: ConfigMeta):
-    _set_config(config.model_dump())
-
-
-@app.get('/get-config')
-def get_config():
-    return _get_config()
 
 
 class HarvestMeta(BaseModel):
