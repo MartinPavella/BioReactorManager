@@ -69,13 +69,6 @@ function HighLevelControlsTab() {
             .finally(() => setLoading(false));
     };
 
-    const handleHarvestLayer = (id) => {
-        if (loading) return;
-        setLoading(true);
-        fetch(backend_uri + `/harvest-layer/${id}`, {method: "POST"})
-            .then((response) => response.json())
-            .finally(() => setLoading(false));
-    };
 
     return (
         <div className="w-full max-w-md space-y-8">
@@ -129,25 +122,6 @@ function HighLevelControlsTab() {
                 >
                     🚨 Turn everything OFF
                 </button>
-            </div>
-
-            {/* Harvest Individual Layers */}
-            <div className="space-y-3">
-                {layers.map((layer) => (
-                    <div
-                        key={layer.id_}
-                        className="flex items-center justify-between px-2"
-                    >
-                        <p className="text-lg font-medium">{layer.name}</p>
-                        <button
-                            onClick={() => handleHarvestLayer(layer.id_)}
-                            className="px-4 py-2 border border-green-500 text-green-600 rounded-full text-sm font-semibold hover:bg-green-100"
-                            disabled={loading}
-                        >
-                            Harvest
-                        </button>
-                    </div>
-                ))}
             </div>
         </div>
     );
