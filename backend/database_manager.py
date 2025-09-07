@@ -1,5 +1,5 @@
-import dataclasses
 import json
+import logging
 import os
 from datetime import datetime
 
@@ -9,13 +9,11 @@ probe_file_name = "probe_readings.json"
 ph_conductivity_file_name = "ph_conductivity_readings.json"
 
 
-@dataclasses.dataclass
 class PROBEReading(BaseModel):
     timestamp: datetime
     value: float
 
 
-@dataclasses.dataclass
 class PHConductivityReading(BaseModel):
     timestamp: datetime
     ph: float
@@ -72,6 +70,7 @@ def get_ph_conductivity_readings():
 
 def log_ph_conductivity_reading(sample: PHConductivityReading):
     """Append a new pH+conductivity reading."""
+    logging.info(f"Storing pH-conductivity reading: {sample.model_dump()}")
     data = _load_ph_cond_data()
     data.append(sample.model_dump())
     _save_ph_cond_data(data)
