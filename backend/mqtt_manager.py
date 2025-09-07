@@ -1,13 +1,12 @@
 # mqtt_manager.py
 import logging
 import re
-import time
 from datetime import datetime
 
 import paho.mqtt.client as mqtt
 
 import database_manager
-from linear_regression import conductivity_reading_to_value, ph_reading_to_value
+from linear_regression import conductivity_reading_to_value, ph_reading_to_value, probe_reading_to_value
 
 broker = "192.168.0.102"
 port = 1883
@@ -64,27 +63,29 @@ def on_message(client, userdata, message):
     logging.info("Received from %s: `%s`", message.topic, msg)
 
     # PROBE message: PROBE[<layer_id>]:<raw_value>
-    if m:= PROBE_RE.match(msg):
+    if m := PROBE_RE.match(msg):
         layer_id = int(m.group(1))
-        raw = int(m.group(2))
-        logging.info("Recording PROBE layer=%s raw=%s", layer_id, raw)
+        reading = int(m.group(2))
 
-        # If your model is a Pydantic BaseModel, use keywords:
-        # Adjust field names if your model uses different ones.
+        # Transform the reading into the corresponding biomass value.
+        value = probe_reading_to_value(reading)
+
+        logging.info("Recording PROBE layer=%s value=%s", layer_id, value)
+
         reading = database_manager.PROBEReading(
             timestamp=datetime.now(),
-            value=raw,
+            value=value,
         )
         database_manager.log_probe_reading(layer_id, reading)
         return
 
     # pH + Conductivity message: ph-cond:<raw_ph>:<raw_cond>
-    if m:= PHCOND_RE.match(msg):
+    if m := PHCOND_RE.match(msg):
         raw_ph = int(m.group(1))
         raw_cond = int(m.group(2))
 
-        ph_value = ph_reading_to_value(raw_ph)  # float
-        conductivity_value = conductivity_reading_to_value(raw_cond)  # float
+        ph_value = ph_reading_to_value(raw_ph)
+        conductivity_value = conductivity_reading_to_value(raw_cond)
 
         logging.info("Recording pH=%s conductivity=%s", ph_value, conductivity_value)
 
@@ -244,4 +245,3 @@ client.loop_start()
 # you can leave these; on reconnect the on_connect subscription will handle it.
 client.subscribe(receive_from_rack_esp_topic(), qos=QOS)
 client.subscribe(receive_from_pump_esp_topic(), qos=QOS)
-
