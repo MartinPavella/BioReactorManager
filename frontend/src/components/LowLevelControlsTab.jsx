@@ -7,14 +7,31 @@ function LowLevelControlsTab() {
     const [loading, setLoading] = useState(false);
     const backend_uri = "http://bioreactor.local:8000";
 
-    // keep debounce timeout in ref so it persists across renders
+    // new states
+    const [peristaltics, setPeristaltics] = useState([
+        {id: 0, on: false},
+        {id: 1, on: false},
+        {id: 2, on: false},
+        {id: 3, on: false},
+    ]);
+    const [reservoirMixingOn, setReservoirMixingOn] = useState(false);
+    const [additiveMixingOn, setAdditiveMixingOn] = useState(false);
+
+    // debounce for main pump power
     const debounceTimeout = useRef(null);
 
     function updateFromBackendState(backend_state) {
-        // Update the UI components based on the given state of the backend.
         setLayers(backend_state.layers || []);
         setPumpOn(backend_state.pump_on);
         setPumpPower(backend_state.pump_power);
+        setPeristaltics((prev) =>
+            prev.map((p) => ({
+                ...p, // keep id and anything else
+                on: backend_state.peristaltics[p.id].on,
+            }))
+        );
+        setReservoirMixingOn(backend_state.reservoir_mixing_on);
+        setAdditiveMixingOn(backend_state.additive_mixing_on);
     }
 
     // Fetch state once and periodically
@@ -75,17 +92,61 @@ function LowLevelControlsTab() {
             .finally(() => setLoading(false));
     };
 
-    // Debounced slider
     const handlePumpPowerChange = (value) => {
-        setPumpPower(value); // update UI instantly
-
+        setPumpPower(value);
         if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
-
         debounceTimeout.current = setTimeout(() => {
             fetch(backend_uri + `/pump-power-change/${value}`, {method: "POST"})
                 .then((res) => res.json())
                 .catch((err) => console.error("Error setting pump power:", err));
-        }, 300); // send only after 300ms of no changes
+        }, 300);
+    };
+
+    const handlePeristalticToggle = (id) => {
+        setPeristaltics((prev) =>
+            prev.map((p) => (p.id === id ? {...p, on: !p.on} : p))
+        );
+        fetch(backend_uri + `/toggle-peristaltic/${id}`, {method: "POST"})
+            .then((res) => res.json())
+            .then((res) => {
+                setPeristaltics((prev) =>
+                    prev.map((p) => (p.id === id ? {...p, on: res.new_peristaltic_on} : p))
+                );
+            })
+            .catch(
+                (err) => console.error("Error toggling peristaltic:", err)
+            );
+    };
+
+    const handleReservoirMixingToggle = () => {
+        setReservoirMixingOn((prev) => !prev);
+        fetch(backend_uri + "/toggle-reservoir-mixing", {
+            method: "POST",
+        })
+            .then((res) => res.json())
+            .then((res) => setReservoirMixingOn(res.new_reservoir_mixing_on))
+            .catch((err) =>
+                console.error("Error toggling reservoir mixing:", err)
+            );
+    };
+
+    const handleAdditiveMixingToggle = () => {
+        setAdditiveMixingOn((prev) => !prev);
+        fetch(backend_uri + "/toggle-additive-mixing", {
+            method: "POST",
+        })
+            .then((res) => res.json())
+            .then((res) => setAdditiveMixingOn(res.new_additive_mixing_on))
+            .catch((err) =>
+                console.error("Error toggling additive mixing:", err)
+            );
+    };
+
+    const handleMeasurement = (type) => {
+        fetch(backend_uri + `/trigger-measurement/${type}`, {method: "POST"})
+            .then((res) => res.json())
+            .then((data) => console.log("Measurement triggered:", data))
+            .catch((err) => console.error("Error triggering measurement:", err));
     };
 
     const handleFailSafe = () => {
@@ -103,7 +164,7 @@ function LowLevelControlsTab() {
 
     // --- UI ---
     return (
-        <div className="w-full max-w-2xl space-y-6">
+        <div className="w-full max-w-3xl space-y-8">
             {/* Layers */}
             <div className="space-y-4">
                 {layers.map((layer) => (
@@ -113,11 +174,10 @@ function LowLevelControlsTab() {
                     >
                         <div>
                             <p className="font-semibold text-gray-800">{layer.name}</p>
-                            <p className="text-sm text-gray-500">ID={layer.id_}</p>
+                            {/*<p className="text-sm text-gray-500">ID={layer.id_}</p>*/}
                         </div>
 
                         <div className="flex space-x-4">
-                            {/* Valve toggle */}
                             <label className="flex items-center space-x-2">
                                 <input
                                     type="checkbox"
@@ -129,7 +189,6 @@ function LowLevelControlsTab() {
                                 <span>Valve</span>
                             </label>
 
-                            {/* Light toggle */}
                             <label className="flex items-center space-x-2">
                                 <input
                                     type="checkbox"
@@ -145,7 +204,7 @@ function LowLevelControlsTab() {
                 ))}
             </div>
 
-            {/* Pump toggle */}
+            {/* Pump */}
             <button
                 onClick={handlePumpToggle}
                 disabled={loading}
@@ -172,7 +231,80 @@ function LowLevelControlsTab() {
                 </div>
             </div>
 
-            {/* Fail-safe button */}
+            {/* Peristaltic pumps */}
+            <div className="bg-white p-6 rounded-lg shadow space-y-4">
+                <h2 className="font-semibold text-lg text-gray-800">
+                    Additive dosing controls
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                    {peristaltics.map((p) => (
+                        <label
+                            key={p.id}
+                            className="p-4 border rounded-lg flex items-center justify-between cursor-pointer"
+                        >
+                            <span>Inject Additive {p.id + 1}</span>
+                            <input
+                                type="checkbox"
+                                checked={p.on}
+                                onChange={() => handlePeristalticToggle(p.id)}
+                                className="w-5 h-5 accent-green-600"
+                            />
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+
+            {/* Mixing reservoir + Additive mixing */}
+            <div className="bg-white p-6 rounded-lg shadow space-y-4">
+                <h2 className="font-semibold text-lg text-gray-800">
+                    Reservoir & Additives mixing
+                </h2>
+                <div className="flex justify-between">
+                    <label className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            checked={reservoirMixingOn}
+                            onChange={handleReservoirMixingToggle}
+                            className="w-6 h-6 accent-blue-600"
+                        />
+                        <span>Run Reservoir Mixing</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            checked={additiveMixingOn}
+                            onChange={handleAdditiveMixingToggle}
+                            className="w-6 h-6 accent-purple-600"
+                        />
+                        <span>Run Additive Mixing</span>
+                    </label>
+                </div>
+            </div>
+
+            {/* Measurement triggers */}
+            <div className="flex justify-between space-x-4">
+                <button
+                    onClick={() => handleMeasurement("ph")}
+                    className="flex-1 py-4 border-2 border-green-600 text-green-700 font-semibold rounded-lg hover:bg-green-100"
+                >
+                    Measure pH
+                </button>
+                <button
+                    onClick={() => handleMeasurement("conductivity")}
+                    className="flex-1 py-4 border-2 border-blue-600 text-blue-700 font-semibold rounded-lg hover:bg-blue-100"
+                >
+                    Measure Conductivity
+                </button>
+                <button
+                    onClick={() => handleMeasurement("probe")}
+                    className="flex-1 py-4 border-2 border-orange-600 text-orange-700 font-semibold rounded-lg hover:bg-orange-100"
+                >
+                    Measure PROBE
+                </button>
+            </div>
+
+            {/* Fail-safe */}
             <div>
                 <button
                     onClick={handleFailSafe}

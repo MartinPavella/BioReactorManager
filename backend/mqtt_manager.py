@@ -127,6 +127,60 @@ def stop_pump():
     client.publish(send_to_pump_esp_topic(), command)
 
 
+def peristaltic_on(id_: int):
+    command = f'peristaltic_on:{id_}'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def peristaltic_off(id_: int):
+    command = f'peristaltic_off:{id_}'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def additive_mixing_on():
+    command = 'additive_mixing_on'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def additive_mixing_off():
+    command = 'additive_mixing_off'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def reservoir_mixing_on():
+    command = 'reservoir_mixing_on'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def reservoir_mixing_off():
+    command = 'reservoir_mixing_off'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def trigger_ph_measurement():
+    command = 'trigger_ph_measurement'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def trigger_conductivity_measurement():
+    command = 'trigger_conductivity_measurement'
+    logging.info(command)
+    client.publish(send_to_pump_esp_topic(), command)
+
+
+def trigger_probe_measurement():
+    command = 'trigger_probe_measurement'
+    logging.info(command)
+    client.publish(send_to_rack_esp_topic(), command)
+
+
 def harvest_layer(layer_id: int, duration_seconds: int):
     logging.info(f'START harvesting layer {layer_id}.')
     open_valve(layer_id)

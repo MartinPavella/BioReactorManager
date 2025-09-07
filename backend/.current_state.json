@@ -2,6 +2,26 @@
   "pump_power": 70,
   "pump_on": false,
   "automatic_cultivation_on": false,
+  "reservoir_mixing_on": false,
+  "additive_mixing_on": false,
+  "peristaltics": [
+    {
+      "id_": 0,
+      "on": false
+    },
+    {
+      "id_": 1,
+      "on": false
+    },
+    {
+      "id_": 2,
+      "on": false
+    },
+    {
+      "id_": 3,
+      "on": false
+    }
+  ],
   "layers": [
     {
       "id_": 0,

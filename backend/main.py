@@ -262,6 +262,72 @@ def turn_everything_off():
     return state
 
 
+@app.post('/toggle-peristaltic/{id_}')
+def toggle_peristaltic(id_: int):
+    state = State.get()
+
+    new_peristaltic_on = not state['peristaltics'][id_]['on']
+    state['peristaltics'][id_]['on'] = new_peristaltic_on
+
+    if new_peristaltic_on:
+        mqtt_manager.peristaltic_on(id_)
+    else:
+        mqtt_manager.peristaltic_off(id_)
+
+    State.set(state)
+
+    return {"id_": id_, "new_peristaltic_on": new_peristaltic_on}
+
+
+@app.post('/toggle-additive-mixing')
+def toggle_additive_mixing():
+    state = State.get()
+
+    new_additive_mixing_on = not state['additive_mixing_on']
+    state['additive_mixing_on'] = new_additive_mixing_on
+
+    if new_additive_mixing_on:
+        mqtt_manager.additive_mixing_on()
+    else:
+        mqtt_manager.additive_mixing_off()
+
+    State.set(state)
+
+    return {"new_additive_mixing_on": new_additive_mixing_on}
+
+
+@app.post('/toggle-reservoir-mixing')
+def toggle_reservoir_mixing():
+    state = State.get()
+
+    new_reservoir_mixing_on = not state['reservoir_mixing_on']
+    state['reservoir_mixing_on'] = new_reservoir_mixing_on
+
+    if new_reservoir_mixing_on:
+        mqtt_manager.reservoir_mixing_on()
+    else:
+        mqtt_manager.reservoir_mixing_off()
+
+    State.set(state)
+
+    return {"new_reservoir_mixing_on": new_reservoir_mixing_on}
+
+
+@app.post('/trigger-measurement/{type_}')
+def toggle_reservoir_mixing(type_: str):
+    type_to_function = {
+        "ph": mqtt_manager.trigger_ph_measurement,
+        "conductivity": mqtt_manager.trigger_probe_measurement,
+        "probe": mqtt_manager.trigger_conductivity_measurement,
+    }
+
+    if type_ in type_to_function:
+        type_to_function[type_]()
+
+    else:
+        raise TypeError(f"Unknown measurement type: {type_}")
+
+
 @app.post('/toggle-automatic-cultivation')
 def toggle_automatic_cultivation():
     state = State.get()
@@ -424,4 +490,3 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
