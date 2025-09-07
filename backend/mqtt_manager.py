@@ -1,229 +1,247 @@
+# mqtt_manager.py
 import logging
+import re
 import time
 from datetime import datetime
 
-import numpy as np
 import paho.mqtt.client as mqtt
 
 import database_manager
+from linear_regression import conductivity_reading_to_value, ph_reading_to_value
 
-broker = '192.168.0.102'
+broker = "192.168.0.102"
 port = 1883
-QOS = 1
+QOS = 0
 CLEAN_SESSION = True
-logging.basicConfig(level=logging.INFO)  # error logging
+
+logging.basicConfig(level=logging.INFO)
 
 
-def send_to_rack_esp_topic(rack=0):
-    return f'server_to_esp/rack{rack}'
+# --- Topic helpers ------------------------------------------------------------
+def send_to_rack_esp_topic(rack: int = 0) -> str:
+    return f"server_to_esp/rack{rack}"
 
 
-def receive_from_rack_esp_topic(rack=0):
-    return f'esp_to_server/rack{rack}'
+def receive_from_rack_esp_topic(rack: int = 0) -> str:
+    return f"esp_to_server/rack{rack}"
 
 
-def send_to_pump_esp_topic():
-    return 'server_to_esp/pump'
+def send_to_pump_esp_topic() -> str:
+    return "server_to_esp/pump"
 
 
-def receive_from_pump_esp_topic():
-    return 'esp_to_server/pump'
+def receive_from_pump_esp_topic() -> str:
+    return "esp_to_server/pump"
 
 
-# use DEBUG,INFO,WARNING
-def on_subscribe(client, userdata, mid, granted_qos):  # create function for callback
-    logging.info(f'SUBSCRIBED from: {str(mid)}')
-    time.sleep(1)
+# --- Callbacks ----------------------------------------------------------------
+def on_subscribe(client, userdata, mid, granted_qos):
+    logging.info(f"SUBSCRIBED mid={mid}, qos={granted_qos}")
 
 
 def on_disconnect(client, userdata, rc=0):
-    logging.info('DISCONNECTED. Code: ' + str(rc))
+    logging.info("DISCONNECTED. rc=%s", rc)
 
 
 def on_connect(client, userdata, flags, rc):
-    logging.info('CONNECTED flags' + str(flags) + 'result code ' + str(rc))
+    logging.info("CONNECTED flags=%s rc=%s", flags, rc)
+    # Subscribe to all inbound topics from devices once connected
+    # so reconnects re-subscribe automatically.
+    client.subscribe("esp_to_server/#", qos=QOS)
+
+
+PROBE_RE = re.compile(r"^PROBE\[(\d+)\]:(\d+)$")
+PHCOND_RE = re.compile(r"^ph-cond:(\d+):(\d+)$")
 
 
 def on_message(client, userdata, message):
-    msg = str(message.payload.decode('utf-8'))
-    logging.info('Recieved from ' + message.topic + f': `{msg}`')
+    try:
+        msg = message.payload.decode("utf-8").strip()
+    except Exception:
+        logging.warning("Received non-utf8 message on %s", message.topic)
+        return
 
-    # Classify the message and react accordingly.
-    if msg[:6] == 'PROBE[':
-        # Data submitted from PROBE reading. The format is: "PROBE[<layer_id>]:<read_value>"
-        layer = int(msg[6])
-        value = int(msg[9:])
+    logging.info("Received from %s: `%s`", message.topic, msg)
 
-        logging.info(f'Recording PROBE {layer} = {value}')
-        database_manager.log_probe_reading(layer, database_manager.PROBEReading(datetime.now(), value))
+    # PROBE message: PROBE[<layer_id>]:<raw_value>
+    if m:= PROBE_RE.match(msg):
+        layer_id = int(m.group(1))
+        raw = int(m.group(2))
+        logging.info("Recording PROBE layer=%s raw=%s", layer_id, raw)
 
-    elif msg[:7] == 'ph-cond:':
-        # Data submitted from pH and conductivity reading. The format is: "ph-cond:<ph_value>:<conductivity_value>"
-        first_colon_index = 7
-        second_colon_index = msg.find(':', first_colon_index + 1)
-        ph_value = int(msg[first_colon_index:second_colon_index])
-        conductivity_value = int(msg[second_colon_index:])
-
-        logging.info(f'Recording pH = {ph_value} and conductivity = {conductivity_value}')
-        database_manager.log_ph_conductivity_reading(
-            database_manager.PHConductivityReading(datetime.now(), ph_value, conductivity_value)
+        # If your model is a Pydantic BaseModel, use keywords:
+        # Adjust field names if your model uses different ones.
+        reading = database_manager.PROBEReading(
+            timestamp=datetime.now(),
+            value=raw,
         )
+        database_manager.log_probe_reading(layer_id, reading)
+        return
+
+    # pH + Conductivity message: ph-cond:<raw_ph>:<raw_cond>
+    if m:= PHCOND_RE.match(msg):
+        raw_ph = int(m.group(1))
+        raw_cond = int(m.group(2))
+
+        ph_value = ph_reading_to_value(raw_ph)  # float
+        conductivity_value = conductivity_reading_to_value(raw_cond)  # float
+
+        logging.info("Recording pH=%s conductivity=%s", ph_value, conductivity_value)
+
+        # Crucial: keyword args for Pydantic model
+        phc = database_manager.PHConductivityReading(
+            timestamp=datetime.now(),
+            ph=ph_value,
+            conductivity=conductivity_value,
+        )
+        database_manager.log_ph_conductivity_reading(phc)
+        return
+
+    # Unknown payload
+    logging.warning("Unrecognized message payload: %s", msg)
 
 
 def on_publish(client, userdata, mid):
-    logging.info('message published ' + str(mid))
+    logging.info("message published mid=%s", mid)
 
 
+# --- Outbound command helpers --------------------------------------------------
 def blink_led():
-    command = 'blink_led'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "blink_led"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def open_valve(layer_id):
-    command = f'open_valve_{layer_id}'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = f"open_valve_{layer_id}"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def close_valve(layer_id):
-    command = f'close_valve_{layer_id}'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = f"close_valve_{layer_id}"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def light_on(layer_id):
-    command = f'light_on_{layer_id}'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = f"light_on_{layer_id}"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def light_off(layer_id):
-    command = f'light_off_{layer_id}'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = f"light_off_{layer_id}"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def all_lights_on():
-    command = 'all_lights_on'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "all_lights_on"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def all_lights_off():
-    command = 'all_lights_off'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "all_lights_off"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def all_valves_on():
-    command = 'all_valves_on'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "all_valves_on"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def all_valves_off():
-    command = 'all_valves_off'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "all_valves_off"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def start_pump(value):
-    command = f'start_pump:{value}'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = f"start_pump:{value}"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def stop_pump():
-    command = 'stop_pump'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "stop_pump"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def peristaltic_on(id_: int):
-    command = f'peristaltic_on:{id_}'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = f"peristaltic_on:{id_}"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def peristaltic_off(id_: int):
-    command = f'peristaltic_off:{id_}'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = f"peristaltic_off:{id_}"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def additive_mixing_on():
-    command = 'additive_mixing_on'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "additive_mixing_on"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def additive_mixing_off():
-    command = 'additive_mixing_off'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "additive_mixing_off"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def reservoir_mixing_on():
-    command = 'reservoir_mixing_on'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "reservoir_mixing_on"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def reservoir_mixing_off():
-    command = 'reservoir_mixing_off'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "reservoir_mixing_off"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def trigger_ph_cond_measurement():
-    command = 'trigger_ph_cond_measurement'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
+    cmd = "trigger_ph_cond_measurement"
+    logging.info(cmd)
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
 
 
 def trigger_probe_measurement():
-    command = 'trigger_probe_measurement'
-    logging.info(command)
-    client.publish(send_to_rack_esp_topic(), command)
+    cmd = "trigger_probe_measurement"
+    logging.info(cmd)
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def harvest_layer(layer_id: int, duration_seconds: int):
-    pass  # TODO
-    # logging.info(f'START harvesting layer {layer_id}.')
-    # open_valve(layer_id)
-    # start_pump()
-    # time.sleep(duration_seconds)  # Pumping.
-    # stop_pump()
-    # time.sleep(1)  # Prevent pressure spikes.
-    # close_valve(layer_id)
-    # logging.info(f'STOP harvesting layer {layer_id}.')
+    # Stub kept for future orchestration
+    pass
 
 
-client = mqtt.Client('ClientA', False)  # create client object
-client.connect(broker, port)  # establish connection
-time.sleep(1)
-client.loop_start()
-client.subscribe(receive_from_rack_esp_topic())
-
-# client.on_subscribe = on_subscribe   #assign function to callback
-# client.on_disconnect = on_disconnect #assign function to callback
-# client.on_connect = on_connect #assign function to callback
+# --- Client setup -------------------------------------------------------------
+client = mqtt.Client(
+    client_id="ClientA",
+    clean_session=CLEAN_SESSION,
+)
+client.on_connect = on_connect
 client.on_message = on_message
+client.on_subscribe = on_subscribe
+client.on_disconnect = on_disconnect
+client.on_publish = on_publish
 
-if __name__ == '__main__':
-    # count = 1
-    while True:  # runs forever break with CTRL+C
-        print('publishing to `', send_to_rack_esp_topic() + '`')
-        # msg = 'Sprava od A: ' + str(count)
-        # count += 1
+client.connect(broker, port, keepalive=60)
+# loop_start() will run the network loop in a thread and call our callbacks.
+client.loop_start()
 
-        rnd = np.random.random()
-        msg = 'blink_led' if rnd < 0.5 else 'open_valve'
-        # msg = 'step'
-        client.publish(send_to_rack_esp_topic(), msg)
+# Optional: if you still want explicit subscriptions outside on_connect,
+# you can leave these; on reconnect the on_connect subscription will handle it.
+client.subscribe(receive_from_rack_esp_topic(), qos=QOS)
+client.subscribe(receive_from_pump_esp_topic(), qos=QOS)
 
-        time.sleep(np.random.randint(5, 8))
-
-# client.disconnect()
-# client.loop_stop()
