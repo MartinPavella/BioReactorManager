@@ -5,6 +5,7 @@ function LowLevelControlsTab() {
     const [pumpOn, setPumpOn] = useState(false);
     const [pumpPower, setPumpPower] = useState(50);
     const [loading, setLoading] = useState(false);
+    const [additiveNames, setAdditiveNames] = useState(["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
     const backend_uri = "http://bioreactor.local:8000";
 
     // new states
@@ -34,6 +35,10 @@ function LowLevelControlsTab() {
         setAdditiveMixingOn(backend_state.additive_mixing_on);
     }
 
+    function updateFromBackendConfig(backend_config) {
+        setAdditiveNames(backend_config.additive_names || ["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
+    }
+
     // Fetch state once and periodically
     useEffect(() => {
         const fetchState = () => {
@@ -43,7 +48,15 @@ function LowLevelControlsTab() {
                 .catch((err) => console.error("Error fetching state:", err));
         };
 
+        const fetchConfig = () => {
+            fetch(backend_uri + "/get-config")
+                .then((res) => res.json())
+                .then(updateFromBackendConfig)
+                .catch((err) => console.error("Error fetching config:", err));
+        }
+
         fetchState();
+        fetchConfig();
         const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
     }, []);
@@ -242,7 +255,7 @@ function LowLevelControlsTab() {
                             key={p.id}
                             className="p-4 border rounded-lg flex items-center justify-between cursor-pointer"
                         >
-                            <span>Inject Additive {p.id + 1}</span>
+                            <span>{additiveNames[p.id]}</span>
                             <input
                                 type="checkbox"
                                 checked={p.on}

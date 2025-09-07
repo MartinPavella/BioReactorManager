@@ -10,6 +10,7 @@ function ConfigurationTab() {
     const [mixingPeriod, setMixingPeriod] = useState(10);
     const [mixingIntensity, setMixingIntensity] = useState(50);
     const [mixingDuration, setMixingDuration] = useState(5);
+    const [additiveNames, setAdditiveNames] = useState(["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
     const [saving, setSaving] = useState(false);
 
     // Fetch existing config when loading
@@ -24,6 +25,7 @@ function ConfigurationTab() {
                 setMixingPeriod(data.medium_mixing_period_minutes || 10);
                 setMixingIntensity(data.medium_mixing_intensity || 50);
                 setMixingDuration(data.medium_mixing_duration_seconds || 5);
+                setAdditiveNames(data.additive_names || ["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
             })
             .catch((err) => console.error("Error fetching config:", err));
     }, []);
@@ -44,6 +46,7 @@ function ConfigurationTab() {
             medium_mixing_period_minutes: mixingPeriod,
             medium_mixing_intensity: mixingIntensity,
             medium_mixing_duration_seconds: mixingDuration,
+            additive_names: additiveNames
         };
 
         fetch(backend_uri + "/set-config", {
@@ -56,6 +59,14 @@ function ConfigurationTab() {
                 console.log("Config updated:", data);
             })
             .finally(() => setSaving(false));
+    };
+
+    const handleAdditiveNameChange = (index, value) => {
+        setAdditiveNames((prev) => {
+            const updated = [...prev];
+            updated[index] = value;
+            return updated;
+        });
     };
 
     return (
@@ -148,6 +159,22 @@ function ConfigurationTab() {
                         className="border rounded p-2 w-24"
                     />
                 </label>
+            </div>
+
+            {/* Additive names */}
+            <div className="bg-white p-6 rounded-lg shadow space-y-4">
+                <h3 className="text-lg font-semibold">Additive Names</h3>
+                {additiveNames.map((name, idx) => (
+                    <label key={idx} className="flex items-center space-x-2">
+                        <span>Additive {idx + 1}:</span>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => handleAdditiveNameChange(idx, e.target.value)}
+                            className="border rounded p-2 flex-1"
+                        />
+                    </label>
+                ))}
             </div>
 
             {/* Save button */}
