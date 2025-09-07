@@ -5,7 +5,7 @@ from datetime import datetime
 import numpy as np
 import paho.mqtt.client as mqtt
 
-import probe_manager
+import database_manager
 
 broker = '192.168.0.102'
 port = 1883
@@ -50,11 +50,24 @@ def on_message(client, userdata, message):
 
     # Classify the message and react accordingly.
     if msg[:6] == 'PROBE[':
-        # TODO The probe data should not be sent automatically. The server should request the data everytime.
         # Data submitted from PROBE reading. The format is: "PROBE[<layer_id>]:<read_value>"
         layer = int(msg[6])
         value = int(msg[9:])
-        probe_manager.log_probe_reading(layer, probe_manager.ProbeReading(datetime.now(), value))
+
+        logging.info(f'Recording PROBE {layer} = {value}')
+        database_manager.log_probe_reading(layer, database_manager.PROBEReading(datetime.now(), value))
+
+    elif msg[:7] == 'ph-cond:':
+        # Data submitted from pH and conductivity reading. The format is: "ph-cond:<ph_value>:<conductivity_value>"
+        first_colon_index = 7
+        second_colon_index = msg.find(':', first_colon_index + 1)
+        ph_value = int(msg[first_colon_index:second_colon_index])
+        conductivity_value = int(msg[second_colon_index:])
+
+        logging.info(f'Recording pH = {ph_value} and conductivity = {conductivity_value}')
+        database_manager.log_ph_conductivity_reading(
+            database_manager.PHConductivityReading(datetime.now(), ph_value, conductivity_value)
+        )
 
 
 def on_publish(client, userdata, mid):
@@ -163,14 +176,8 @@ def reservoir_mixing_off():
     client.publish(send_to_pump_esp_topic(), command)
 
 
-def trigger_ph_measurement():
-    command = 'trigger_ph_measurement'
-    logging.info(command)
-    client.publish(send_to_pump_esp_topic(), command)
-
-
-def trigger_conductivity_measurement():
-    command = 'trigger_conductivity_measurement'
+def trigger_ph_cond_measurement():
+    command = 'trigger_ph_cond_measurement'
     logging.info(command)
     client.publish(send_to_pump_esp_topic(), command)
 
@@ -182,14 +189,15 @@ def trigger_probe_measurement():
 
 
 def harvest_layer(layer_id: int, duration_seconds: int):
-    logging.info(f'START harvesting layer {layer_id}.')
-    open_valve(layer_id)
-    start_pump()
-    time.sleep(duration_seconds)  # Pumping.
-    stop_pump()
-    time.sleep(1)  # Prevent pressure spikes.
-    close_valve(layer_id)
-    logging.info(f'STOP harvesting layer {layer_id}.')
+    pass  # TODO
+    # logging.info(f'START harvesting layer {layer_id}.')
+    # open_valve(layer_id)
+    # start_pump()
+    # time.sleep(duration_seconds)  # Pumping.
+    # stop_pump()
+    # time.sleep(1)  # Prevent pressure spikes.
+    # close_valve(layer_id)
+    # logging.info(f'STOP harvesting layer {layer_id}.')
 
 
 client = mqtt.Client('ClientA', False)  # create client object

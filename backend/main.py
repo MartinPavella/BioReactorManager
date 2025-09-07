@@ -10,9 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-import medium_monitoring_manager
+import database_manager
 import mqtt_manager
-import probe_manager
 
 app = FastAPI()
 
@@ -178,12 +177,12 @@ def get_state():
 
 @app.get("/get-probe-data/{id_}")
 def get_probe_data(id_: int):
-    return probe_manager.get_all_readings(id_)
+    return database_manager.get_all_probe_readings(id_)
 
 
 @app.get("/get-ph-conductivity-data")
 def get_ph_conductivity_data():
-    return medium_monitoring_manager.get_ph_conductivity_data()
+    return database_manager.get_ph_conductivity_readings()
 
 
 class HarvestMeta(BaseModel):
@@ -316,9 +315,8 @@ def toggle_reservoir_mixing():
 @app.post('/trigger-measurement/{type_}')
 def toggle_reservoir_mixing(type_: str):
     type_to_function = {
-        "ph": mqtt_manager.trigger_ph_measurement,
-        "conductivity": mqtt_manager.trigger_probe_measurement,
-        "probe": mqtt_manager.trigger_conductivity_measurement,
+        "ph-cond": mqtt_manager.trigger_ph_cond_measurement,
+        "probe": mqtt_manager.trigger_probe_measurement,
     }
 
     if type_ in type_to_function:

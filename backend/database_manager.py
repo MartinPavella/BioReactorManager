@@ -1,19 +1,28 @@
 import dataclasses
 import json
+import os
 from datetime import datetime
 
 from pydantic import BaseModel
 
 probe_file_name = "probe_readings.json"
+ph_conductivity_file_name = "ph_conductivity_readings.json"
 
 
 @dataclasses.dataclass
-class ProbeReading(BaseModel):
+class PROBEReading(BaseModel):
     timestamp: datetime
     value: float
 
 
-def log_probe_reading(layer_id: int, reading: ProbeReading):
+@dataclasses.dataclass
+class PHConductivityReading(BaseModel):
+    timestamp: datetime
+    ph: float
+    conductivity: float
+
+
+def log_probe_reading(layer_id: int, reading: PROBEReading):
     """ Store a new probe reading for a given layer. """
     try:
         with open(probe_file_name, "r") as f:
@@ -32,7 +41,7 @@ def log_probe_reading(layer_id: int, reading: ProbeReading):
     return {"status": "ok", "layer_id": layer_id, "reading": reading}
 
 
-def get_all_readings(layer_id: int) -> list[str]:
+def get_all_probe_readings(layer_id: int) -> list[str]:
     """ Return all probe readings for a given layer. """
     try:
         with open(probe_file_name, "r") as f:
@@ -42,3 +51,28 @@ def get_all_readings(layer_id: int) -> list[str]:
 
     # TODO Limit the returned data. E.g. to 4 days and at most 100 samples.
     return data.get(str(layer_id), [])
+
+
+def _load_ph_cond_data():
+    if os.path.exists(ph_conductivity_file_name):
+        with open(ph_conductivity_file_name, "r") as f:
+            return json.load(f)
+    return []
+
+
+def _save_ph_cond_data(data):
+    with open(ph_conductivity_file_name, "w") as f:
+        json.dump(data, f, indent=2, default=str)
+
+
+def get_ph_conductivity_readings():
+    """Return all pH and conductivity readings."""
+    return _load_ph_cond_data()
+
+
+def log_ph_conductivity_reading(sample: PHConductivityReading):
+    """Append a new pH+conductivity reading."""
+    data = _load_ph_cond_data()
+    data.append(sample.model_dump())
+    _save_ph_cond_data(data)
+    return {"status": "ok", "count": len(data)}
