@@ -31,7 +31,12 @@ def log_probe_reading(layer_id: int, reading: PROBEReading):
     layer_key = str(layer_id)
     if layer_key not in data:
         data[layer_key] = []
-    data[layer_key].append(reading.model_dump())
+
+    json_data = {
+        "timestamp": reading.timestamp.isoformat(timespec="seconds"),
+        "value": reading.value,
+    }
+    data[layer_key].append(json_data)
 
     with open(probe_file_name, "w") as f:
         json.dump(data, f)
