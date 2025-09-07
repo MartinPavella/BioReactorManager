@@ -246,8 +246,18 @@ def turn_everything_off():
     state = State.get()
     state['automatic_cultivation_on'] = False
 
+    # Turn all pumps off.
+    mqtt_manager.stop_pump()
+    for peristaltic_state in state['peristaltics']:
+        mqtt_manager.peristaltic_off(peristaltic_state['id_'])
+    mqtt_manager.reservoir_mixing_off()
+    mqtt_manager.additive_mixing_off()
+
     state['pump_on'] = False
-    mqtt_manager.stop_pump()  # Pump off.
+    for peristaltic_state in state['peristaltics']:
+        peristaltic_state['on'] = False
+    state['reservoir_mixing_on'] = False
+    state['additive_mixing_on'] = False
 
     # Turn off all lights and valves.
     mqtt_manager.all_lights_off()
