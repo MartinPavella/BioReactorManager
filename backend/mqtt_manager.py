@@ -91,6 +91,30 @@ def light_off(layer_id):
     client.publish(send_to_rack_esp_topic(), command)
 
 
+def all_lights_on():
+    command = 'all_lights_on'
+    logging.info(command)
+    client.publish(send_to_rack_esp_topic(), command)
+
+
+def all_lights_off():
+    command = 'all_lights_off'
+    logging.info(command)
+    client.publish(send_to_rack_esp_topic(), command)
+
+
+def all_valves_on():
+    command = 'all_valves_on'
+    logging.info(command)
+    client.publish(send_to_rack_esp_topic(), command)
+
+
+def all_valves_off():
+    command = 'all_valves_off'
+    logging.info(command)
+    client.publish(send_to_rack_esp_topic(), command)
+
+
 def start_pump(value):
     command = f'start_pump:{value}'
     logging.info(command)

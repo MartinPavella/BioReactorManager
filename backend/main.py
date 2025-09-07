@@ -138,9 +138,7 @@ def _run_automatic_cultivation():
             # The lights should be ON.
             logging.info(f"Automatic Cultivation: lights ON ({threading.current_thread().name}).")
 
-            # TODO Replace with a single MQTT message.
-            for id_ in range(5):
-                mqtt_manager.light_on(id_)
+            mqtt_manager.all_lights_on()
 
             # Record that the lights are on in the `State`.
             state = State.get()
@@ -152,9 +150,7 @@ def _run_automatic_cultivation():
             # The lights should be OFF.
             logging.info(f"Automatic Cultivation: lights OFF ({threading.current_thread().name}).")
 
-            # TODO Replace with a single MQTT message.
-            for id_ in range(5):
-                mqtt_manager.light_off(id_)
+            mqtt_manager.all_lights_off()
 
             # Record that the lights are off in the `State`.
             state = State.get()
@@ -226,21 +222,21 @@ def switch_light(id_: int):
 
 @app.post('/all-lights-on')
 def all_lights_on():
+    mqtt_manager.all_lights_on()
+
     state = State.get()
     for id_, layer in enumerate(state['layers']):
         layer['light_on'] = True
-        mqtt_manager.light_on(id_)  # TODO Replace by single MQTT call for all lights.
-
     State.set(state)
 
 
 @app.post('/all-lights-off')
 def all_lights_off():
+    mqtt_manager.all_lights_off()
+
     state = State.get()
     for id_, layer in enumerate(state['layers']):
         layer['light_on'] = False
-        mqtt_manager.light_off(id_)  # TODO Replace by single MQTT call for all lights.
-
     State.set(state)
 
 
@@ -254,12 +250,12 @@ def turn_everything_off():
     state['pump_on'] = False
     mqtt_manager.stop_pump()  # Pump off.
 
-    # Turn off all valves.
+    # Turn off all lights and valves.
+    mqtt_manager.all_lights_off()
+    mqtt_manager.all_valves_off()
     for id_, layer in enumerate(state['layers']):
         layer['valve_on'] = False
         layer['light_on'] = False
-        mqtt_manager.close_valve(id_)  # TODO Replace by single MQTT call for all valves.
-        mqtt_manager.light_off(id_)  # TODO Replace by single MQTT call for all valves.
 
     State.set(state)
 
@@ -428,3 +424,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
