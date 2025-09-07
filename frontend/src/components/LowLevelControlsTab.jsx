@@ -285,20 +285,14 @@ function LowLevelControlsTab() {
             {/* Measurement triggers */}
             <div className="flex justify-between space-x-4">
                 <button
-                    onClick={() => handleMeasurement("ph")}
+                    onClick={() => handleMeasurement("ph-cond")}
                     className="flex-1 py-4 border-2 border-green-600 text-green-700 font-semibold rounded-lg hover:bg-green-100"
                 >
-                    Measure pH
-                </button>
-                <button
-                    onClick={() => handleMeasurement("conductivity")}
-                    className="flex-1 py-4 border-2 border-blue-600 text-blue-700 font-semibold rounded-lg hover:bg-blue-100"
-                >
-                    Measure Conductivity
+                    Measure pH and conductivity
                 </button>
                 <button
                     onClick={() => handleMeasurement("probe")}
-                    className="flex-1 py-4 border-2 border-orange-600 text-orange-700 font-semibold rounded-lg hover:bg-orange-100"
+                    className="flex-1 py-4 border-2 border-blue-600 text-blue-700 font-semibold rounded-lg hover:bg-blue-100"
                 >
                     Measure PROBE
                 </button>
