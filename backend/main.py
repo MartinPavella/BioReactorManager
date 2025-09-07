@@ -107,6 +107,7 @@ class ConfigMeta(BaseModel):
     medium_mixing_period_minutes: int
     medium_mixing_intensity: int
     medium_mixing_duration_seconds: int
+    additive_names: list[str]
 
 
 @app.post('/set-config')

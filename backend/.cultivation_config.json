@@ -5,5 +5,11 @@
   "medium_reading_period_minutes": 60,
   "medium_mixing_period_minutes": 10,
   "medium_mixing_intensity": 50,
-  "medium_mixing_duration_seconds": 5
+  "medium_mixing_duration_seconds": 5,
+  "additive_names": [
+    "Additive 1",
+    "Additive 2",
+    "Additive 3",
+    "Additive 4"
+  ]
 }
