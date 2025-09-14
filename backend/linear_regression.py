@@ -1,8 +1,10 @@
+import numpy as np
 
 
 def ph_reading_to_value(reading: int) -> float:
     # TODO Implement linear regression.
     return (float(reading) / 4096.) * 2. + 6.  # Temporary code.
+
 
 def conductivity_reading_to_value(reading: int) -> float:
     # TODO Implement linear regression.
@@ -11,4 +13,6 @@ def conductivity_reading_to_value(reading: int) -> float:
 
 def probe_reading_to_value(reading: int) -> float:
     # TODO Implement linear regression.
-    return (float(reading) / 4096.) * 200. + 400.  # Temporary code.
+    value = 1133.7643 - 0.2872 * float(reading)
+
+    return float(np.clip(value, 0., 800.0))  # Clip to the expected range.

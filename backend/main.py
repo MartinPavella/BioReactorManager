@@ -181,6 +181,16 @@ def get_probe_data(id_: int):
     return database_manager.get_all_probe_readings(id_)
 
 
+@app.get("/get-current-probe-reading/{id_}")
+def get_current_probe_reading(id_: int):
+    return {"value": mqtt_manager.get_current_probe_reading(id_)}
+
+
+@app.get("/request-current-probe-measurements")
+def request_current_probe_measurements():
+    mqtt_manager.request_current_probe_readings()
+
+
 @app.get("/get-ph-conductivity-data")
 def get_ph_conductivity_data():
     return database_manager.get_ph_conductivity_readings()
