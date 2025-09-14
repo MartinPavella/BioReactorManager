@@ -17,7 +17,7 @@ ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, T
 
 const backend_uri = "http://bioreactor.local:8000";
 
-const BioMassChart = ({layerId}) => {
+const BioMassChart = ({layerId, label}) => {
     const [chartData, setChartData] = useState(null);
 
     useEffect(() => {
@@ -48,7 +48,7 @@ const BioMassChart = ({layerId}) => {
 
     return (
         <div className="w-full mb-6">
-            <h2 className="text-center mb-2 text-lg font-semibold">Layer {5 - layerId}</h2>
+            <h2 className="text-center mb-2 text-lg font-semibold">{label}</h2>
             <div style={{height: "250px"}}>
                 {chartData ? (
                     <Line
