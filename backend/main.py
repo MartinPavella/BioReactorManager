@@ -158,6 +158,16 @@ def _run_automatic_cultivation():
                 layer['light_on'] = False
             State.set(state)
 
+        if now.second >= 50:
+            mqtt_manager.open_valve(0)
+            for _ in range(4):
+                mqtt_manager.start_pump(70)
+                time.sleep(1)
+                mqtt_manager.start_pump(50)
+                time.sleep(1)
+            mqtt_manager.stop_pump()
+            mqtt_manager.close_valve(0)
+
         # Check whether this thread should be killed every second, and check if the lights should be switched on/off
         #  evert 10 seconds.
         for _ in range(10):
