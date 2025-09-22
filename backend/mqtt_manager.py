@@ -52,8 +52,14 @@ def on_connect(client, userdata, flags, rc):
 PROBE_RE = re.compile(r"^PROBE\[(\d+)\]:(\d+)$")
 PROBE_current_RE = re.compile(r"^PROBE_reading\[(\d+)\]:(\d+)$")
 PHCOND_RE = re.compile(r"^ph-cond:(\d+):(\d+)$")
+PHCOND_current_RE = re.compile(r"^ph-cond_reading:(\d+):(\d+)$")
 
-latest_probe_readings: dict[int, list[int]] = {}
+latest_biomass_values: dict[int, list[float]] = {}
+latest_probe_reading: dict[int, int]
+latest_ph_values: list[float] = []
+latest_ph_reading: int | None = None
+latest_ec_values: list[float] = []
+latest_ec_reading: int | None = None
 
 
 def on_message(client, userdata, message):
@@ -71,7 +77,7 @@ def on_message(client, userdata, message):
         reading = int(m.group(2))
 
         # Transform the reading into the corresponding biomass value.
-        value = probe_reading_to_value(reading)
+        value = probe_reading_to_value(reading, layer_id)
 
         logging.info("Recording PROBE layer=%s value=%s", layer_id, value)
 
@@ -106,15 +112,31 @@ def on_message(client, userdata, message):
         reading = int(m.group(2))
 
         # Transform the reading into the corresponding biomass value.
-        value = reading
-        # value = probe_reading_to_value(reading)  TODO Uncomment.
+        value = probe_reading_to_value(reading, layer_id)
 
         # logging.info("Reading current PROBE layer=%s value=%s", layer_id, value)
-        logs = latest_probe_readings.get(layer_id, [])
-        logs.append(reading)
-        if len(logs) >= 5:
+        logs = latest_biomass_values.get(layer_id, [])
+        logs.append(value)
+        if len(logs) >= 10:  # Take the average from 10 values.
             logs.pop(0)
-        latest_probe_readings[layer_id] = logs
+        latest_biomass_values[layer_id] = logs
+
+        return
+
+    if m := PHCOND_current_RE.match(msg):
+        raw_ph = int(m.group(1))
+        raw_cond = int(m.group(2))
+
+        ph_value = ph_reading_to_value(raw_ph)
+        ec_value = conductivity_reading_to_value(raw_cond)
+
+        if len(latest_ph_values) > 10:
+            latest_ph_values.pop(0)
+        latest_ph_values.append(ph_value)
+
+        if len(latest_ec_values) > 10:
+            latest_ec_values.pop(0)
+        latest_ec_values.append(ec_value)
 
         return
 
@@ -242,19 +264,42 @@ def trigger_probe_measurement():
 
 
 def request_current_probe_readings():
-    logging.info("Requesting current PROBE readings.")
+    # logging.info("Requesting current PROBE readings.")
     for i in range(5):
         cmd = f"get_probe_reading:{i}"
         client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
+def request_current_ph_ec_readings():
+    cmd = f"get_ph_cond_reading"
+    client.publish(send_to_pump_esp_topic(), cmd, qos=QOS)
+
+
 def get_current_probe_reading(id_: int) -> int:
-    logs = latest_probe_readings.get(id_, [0])
-    average_reading = int(sum(logs) / len(logs))
-    return int(probe_reading_to_value(average_reading))
-    # cmd = f"get_probe_reading:{id_}"
-    # logging.info(cmd)
-    # client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
+    return latest_probe_reading.get(id_, 0.)
+
+
+def get_current_biomass_value(id_: int) -> float:
+    logs = latest_biomass_values.get(id_, [0])
+    return int(sum(logs) / len(logs))
+
+
+def get_current_ph_reading() -> int:
+    return latest_ph_reading or 0
+
+
+def get_current_ph_value() -> int:
+    logs = latest_ph_values if latest_ph_values else [0.]
+    return int(sum(logs) / len(logs))
+
+
+def get_current_ec_reading() -> int:
+    return latest_ec_reading or 0
+
+
+def get_current_ec_value() -> int:
+    logs = latest_ec_values if latest_ec_values else [0.]
+    return int(sum(logs) / len(logs))
 
 
 def harvest_layer(layer_id: int, duration_seconds: int):

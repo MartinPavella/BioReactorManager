@@ -17,7 +17,7 @@ ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, T
 
 const backend_uri = "http://bioreactor.local:8000";
 
-const PHCondChart = () => {
+const PHCondChart = ({ph, ec}) => {
     const [chartData, setChartData] = useState(null);
 
     useEffect(() => {
@@ -53,7 +53,13 @@ const PHCondChart = () => {
 
     return (
         <div className="w-full mb-6">
-            <h2 className="text-center mb-2 text-lg font-semibold">Medium pH and Conductivity</h2>
+            <h2 className="text-center mb-2 text-lg font-semibold">
+                Medium pH and Conductivity
+                <div className="mt-2 text-center text-sm text-gray-600">
+                    {ph === 0 ? "pH probe not connected" : `Current pH: ${ph}`} |{" "}
+                    {ec === 0 ? "EC probe not connected" : `Current EC: ${ec} mS/cm`}
+                </div>
+            </h2>
             <div style={{height: "300px"}}>
                 {chartData ? (
                     <Line
