@@ -233,18 +233,18 @@ def get_probe_data(id_: int):
     return database_manager.get_all_probe_readings(id_)
 
 
-@app.get("/get-current-biomass-value/{id_}")
-def get_current_probe_reading(id_: int):
-    return {"value": mqtt_manager.get_current_biomass_value(id_)}
+@app.get("/get-current-biomass-values")
+def get_current_biomass_values():
+    return {"biomass": [mqtt_manager.get_current_biomass_value(id_) for id_ in range(5)]}
 
 
-@app.get("/get-current-probe-reading/{id_}")
-def get_current_probe_reading(id_: int):
-    return {"value": mqtt_manager.get_current_probe_reading(id_)}
+@app.get("/get-current-probe-readings")
+def get_current_probe_readings():
+    return {"probes": [mqtt_manager.get_current_probe_reading(id_) for id_ in range(5)]}
 
 
 @app.get("/get-current-ec-value")
-def get_current_ec_reading():
+def get_current_ec_value():
     return {"value": mqtt_manager.get_current_ec_value()}
 
 
@@ -254,7 +254,7 @@ def get_current_ec_reading():
 
 
 @app.get("/get-current-ph-value")
-def get_current_ph_reading():
+def get_current_ph_value():
     return {"value": mqtt_manager.get_current_ph_value()}
 
 

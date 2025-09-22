@@ -17,7 +17,7 @@ function ChartsTab() {
         };
 
         fetchBiomassValues(); // run immediately
-        const interval = setInterval(fetchBiomassValues, 900);
+        const interval = setInterval(fetchBiomassValues, 1900);
 
         return () => clearInterval(interval);
     }, [backend_uri]);
@@ -30,7 +30,7 @@ function ChartsTab() {
         };
 
         fetchPHECValues(); // run immediately
-        const interval = setInterval(fetchPHECValues, 900);
+        const interval = setInterval(fetchPHECValues, 1900);
 
         return () => clearInterval(interval);
     }, [backend_uri]);
@@ -38,32 +38,27 @@ function ChartsTab() {
     // Read the current biomass data from the backend.
     useEffect(() => {
         const fetchReadings = () => {
-            Promise.all(
-                [0, 1, 2, 3, 4].map((id) =>
-                    fetch(`${backend_uri}/get-current-biomass-value/${id}`)
-                        .then((res) => {
-                            if (!res.ok) {
-                                throw new Error(`HTTP error! status: ${res.status}`);
-                            }
-                            return res.json();
-                        })
-                        .then((data) => data.value)
-                        .catch((err) => {
-                            console.error(`Error fetching probe ${id}:`, err);
-                            return 0; // fallback
-                        })
-                )
-            )
-                .then((data) => setBiomassValues(data))
-                .catch((err) =>
-                    console.error("Error updating probe readings:", err)
-                );
+            fetch(`${backend_uri}/get-current-biomass-values`)
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then((data) => {
+                    if (data && Array.isArray(data.biomass)) {
+                        setBiomassValues(data.biomass);
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error fetching biomass values:", err);
+                });
         };
 
         fetchReadings();
-        const interval = setInterval(fetchReadings, 1000); // poll every second
+        const interval = setInterval(fetchReadings, 2000);
         return () => clearInterval(interval);
-    }, []);
+    }, [backend_uri]);
 
     // Read the current EC and pH data from the backend.
     useEffect(() => {
@@ -91,8 +86,7 @@ function ChartsTab() {
         };
 
         fetchPH_EC();
-        const interval = setInterval(fetchPH_EC, 1000);
-
+        const interval = setInterval(fetchPH_EC, 2000);
         return () => clearInterval(interval);
     }, [backend_uri]);
 
@@ -104,7 +98,7 @@ function ChartsTab() {
                 const reading = biomassValues[layerId];
                 const label =
                     reading === 0
-                        ? `Layer ${5 - layerId} – Probe not connected`
+                        ? `Layer ${5 - layerId} – PROBE not connected`
                         : `Layer ${5 - layerId} – Current biomass = ${reading} g`;
 
                 return (

@@ -52,7 +52,7 @@ function LowLevelControlsTab() {
         };
 
         fetchBiomassValues(); // run immediately
-        const interval = setInterval(fetchBiomassValues, 900);
+        const interval = setInterval(fetchBiomassValues, 1900);
 
         return () => clearInterval(interval);
     }, [backend_uri]);
@@ -65,7 +65,7 @@ function LowLevelControlsTab() {
         };
 
         fetchPHECValues(); // run immediately
-        const interval = setInterval(fetchPHECValues, 900);
+        const interval = setInterval(fetchPHECValues, 1900);
 
         return () => clearInterval(interval);
     }, [backend_uri]);
@@ -92,20 +92,18 @@ function LowLevelControlsTab() {
         return () => clearInterval(interval);
     }, []);
 
-    // Fetch raw readings every 3s
+    // Fetch raw readings every 2s
     useEffect(() => {
         const fetchRawReadings = () => {
-            // probes
-            Promise.all(
-                [0, 1, 2, 3, 4].map((id) =>
-                    fetch(`${backend_uri}/get-current-probe-reading/${id}`)
-                        .then((res) => res.json())
-                        .then((data) => data.value)
-                        .catch(() => null)
-                )
-            ).then((values) => {
-                if (values) setProbeReadings(values);
-            });
+            // probes (single call)
+            fetch(`${backend_uri}/get-current-probe-readings`)
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data && Array.isArray(data.probes)) {
+                        setProbeReadings(data.probes);
+                    }
+                })
+                .catch(() => null);
 
             // ec
             fetch(`${backend_uri}/get-current-ec-reading`)

@@ -50,7 +50,7 @@ def on_connect(client, userdata, flags, rc):
 
 
 PROBE_RE = re.compile(r"^PROBE\[(\d+)\]:(\d+)$")
-PROBE_current_RE = re.compile(r"^PROBE_reading\[(\d+)\]:(\d+)$")
+PROBE_current_RE = re.compile(r"^PROBE_readings:(\d+),(\d+),(\d+),(\d+),(\d+)$")
 PHCOND_RE = re.compile(r"^ph-cond:(\d+):(\d+)$")
 PHCOND_current_RE = re.compile(r"^ph-cond_reading:(\d+):(\d+)$")
 
@@ -108,20 +108,20 @@ def on_message(client, userdata, message):
         return
 
     if m := PROBE_current_RE.match(msg):
-        layer_id = int(m.group(1))
-        reading = int(m.group(2))
+        readings = [int(m.group(i)) for i in range(1, 6)]
 
-        latest_probe_reading[layer_id] = reading
+        for i, reading in enumerate(readings):
+            latest_probe_reading[i] = reading
 
-        # Transform the reading into the corresponding biomass value.
-        value = probe_reading_to_value(reading, layer_id)
+            # Transform the reading into the corresponding biomass value.
+            value = probe_reading_to_value(reading, i)
 
-        # logging.info("Reading current PROBE layer=%s value=%s", layer_id, value)
-        logs = latest_biomass_values.get(layer_id, [])
-        logs.append(value)
-        if len(logs) >= 10:  # Take the average from 10 values.
-            logs.pop(0)
-        latest_biomass_values[layer_id] = logs
+            # logging.info("Reading current PROBE layer=%s value=%s", layer_id, value)
+            logs = latest_biomass_values.get(i, [])
+            logs.append(value)
+            if len(logs) >= 10:  # Take the average from 10 values.
+                logs.pop(0)
+            latest_biomass_values[i] = logs
 
         return
 
@@ -271,9 +271,8 @@ def trigger_probe_measurement():
 
 def request_current_probe_readings():
     # logging.info("Requesting current PROBE readings.")
-    for i in range(5):
-        cmd = f"get_probe_reading:{i}"
-        client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
+    cmd = "get_probe_readings"
+    client.publish(send_to_rack_esp_topic(), cmd, qos=QOS)
 
 
 def request_current_ph_ec_readings():
