@@ -7,35 +7,37 @@ function ChartsTab() {
     const [ecValue, setEcValue] = useState(0);
     const [phValue, setPhValue] = useState(0);
 
+    // Keys to force chart reload
+    const [phEcReloadKey, setPhEcReloadKey] = useState(0);
+    const [biomassReloadKey, setBiomassReloadKey] = useState(0);
+
     const backend_uri = "http://bioreactor.local:8000";
 
-    // Read the current PROBE data from the ESP, and store it in the backend.
+    // Request biomass from ESP every ~2s
     useEffect(() => {
         const fetchBiomassValues = () => {
             fetch(backend_uri + "/request-current-probe-measurements")
                 .catch((err) => console.error("Error requesting probe readings:", err));
         };
 
-        fetchBiomassValues(); // run immediately
+        fetchBiomassValues();
         const interval = setInterval(fetchBiomassValues, 1900);
-
         return () => clearInterval(interval);
     }, [backend_uri]);
 
-    // Read the current pH and EC data from the ESP, and store it in the backend.
+    // Request pH+EC from ESP every ~2s
     useEffect(() => {
         const fetchPHECValues = () => {
             fetch(backend_uri + "/request-current-ph-ec-measurements")
                 .catch((err) => console.error("Error requesting pH and EC readings:", err));
         };
 
-        fetchPHECValues(); // run immediately
+        fetchPHECValues();
         const interval = setInterval(fetchPHECValues, 1900);
-
         return () => clearInterval(interval);
     }, [backend_uri]);
 
-    // Read the current biomass data from the backend.
+    // Read biomass values stored in backend
     useEffect(() => {
         const fetchReadings = () => {
             fetch(`${backend_uri}/get-current-biomass-values`)
@@ -60,7 +62,7 @@ function ChartsTab() {
         return () => clearInterval(interval);
     }, [backend_uri]);
 
-    // Read the current EC and pH data from the backend.
+    // Read pH + EC values stored in backend
     useEffect(() => {
         const fetchPH_EC = () => {
             Promise.all([
@@ -90,25 +92,81 @@ function ChartsTab() {
         return () => clearInterval(interval);
     }, [backend_uri]);
 
+    // --- Handlers for deleting data ---
+    const handleDeletePhEc = () => {
+        if (!window.confirm("Are you sure you want to delete all pH/EC data?")) return;
+
+        fetch(`${backend_uri}/delete-ph-ec-readings`, {method: "DELETE"})
+            .then((res) => {
+                if (!res.ok) throw new Error("Failed to delete pH/EC data");
+                return res.json();
+            })
+            .then(() => {
+                // Force PHCondChart to reload by updating key
+                setPhEcReloadKey((prev) => prev + 1);
+            })
+            .catch((err) => {
+                console.error("Error deleting pH/EC data:", err);
+                alert("Error deleting pH/EC data.");
+            });
+    };
+
+    const handleDeleteProbes = () => {
+        if (!window.confirm("Are you sure you want to delete all PROBE data?")) return;
+
+        fetch(`${backend_uri}/delete-probe-readings`, {method: "DELETE"})
+            .then((res) => {
+                if (!res.ok) throw new Error("Failed to delete PROBE data");
+                return res.json();
+            })
+            .then(() => {
+                // Force BioMassCharts to reload by updating key
+                setBiomassReloadKey((prev) => prev + 1);
+            })
+            .catch((err) => {
+                console.error("Error deleting PROBE data:", err);
+                alert("Error deleting PROBE data.");
+            });
+    };
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
-            <PHCondChart ec={ecValue} ph={phValue}/>
+            {/* pH + EC chart */}
+            <div className="flex flex-col">
+                <PHCondChart key={phEcReloadKey} ec={ecValue} ph={phValue}/>
+                <button
+                    onClick={handleDeletePhEc}
+                    className="mt-4 py-2 px-4 bg-white border-2 border-red-600 text-red-600 rounded-lg shadow hover:bg-red-50 font-semibold"
+                >
+                    🗑 Delete pH & EC Data
+                </button>
+            </div>
 
-            {[0, 1, 2, 3, 4].map((layerId) => {
-                const reading = biomassValues[layerId];
-                const label =
-                    reading === 0
-                        ? `Layer ${5 - layerId} – PROBE not connected`
-                        : `Layer ${5 - layerId} – Current biomass = ${reading} g`;
+            {/* Biomass charts */}
+            <div className="col-span-1 md:col-span-2 space-y-6">
+                {[0, 1, 2, 3, 4].map((layerId) => {
+                    const reading = biomassValues[layerId];
+                    const label =
+                        reading === 0
+                            ? `Layer ${5 - layerId} – PROBE not connected`
+                            : `Layer ${5 - layerId} – Current biomass = ${reading} g`;
 
-                return (
-                    <BioMassChart
-                        key={layerId}
-                        layerId={layerId}
-                        label={label}
-                    />
-                );
-            })}
+                    return (
+                        <BioMassChart
+                            key={`${biomassReloadKey}-${layerId}`}
+                            layerId={layerId}
+                            label={label}
+                        />
+                    );
+                })}
+
+                <button
+                    onClick={handleDeleteProbes}
+                    className="mt-6 w-full py-3 bg-white border-2 border-red-600 text-red-600 text-lg rounded-lg shadow hover:bg-red-50 font-semibold"
+                >
+                    🗑 Delete PROBE Data
+                </button>
+            </div>
         </div>
     );
 }
