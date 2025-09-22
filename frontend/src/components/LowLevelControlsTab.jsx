@@ -18,6 +18,11 @@ function LowLevelControlsTab() {
     const [reservoirMixingOn, setReservoirMixingOn] = useState(false);
     const [additiveMixingOn, setAdditiveMixingOn] = useState(false);
 
+    // raw readings
+    const [probeReadings, setProbeReadings] = useState([0, 0, 0, 0, 0]);
+    const [ecReading, setEcReading] = useState(0);
+    const [phReading, setPhReading] = useState(0);
+
     // debounce for main pump power
     const debounceTimeout = useRef(null);
 
@@ -27,7 +32,7 @@ function LowLevelControlsTab() {
         setPumpPower(backend_state.pump_power);
         setPeristaltics((prev) =>
             prev.map((p) => ({
-                ...p, // keep id and anything else
+                ...p,
                 on: backend_state.peristaltics[p.id].on,
             }))
         );
@@ -39,7 +44,33 @@ function LowLevelControlsTab() {
         setAdditiveNames(backend_config.additive_names || ["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
     }
 
-    // Fetch state once and periodically
+    // Read the current PROBE data from the ESP, and store it in the backend.
+    useEffect(() => {
+        const fetchBiomassValues = () => {
+            fetch(backend_uri + "/request-current-probe-measurements")
+                .catch((err) => console.error("Error requesting probe readings:", err));
+        };
+
+        fetchBiomassValues(); // run immediately
+        const interval = setInterval(fetchBiomassValues, 900);
+
+        return () => clearInterval(interval);
+    }, [backend_uri]);
+
+    // Read the current pH and EC data from the ESP, and store it in the backend.
+    useEffect(() => {
+        const fetchPHECValues = () => {
+            fetch(backend_uri + "/request-current-ph-ec-measurements")
+                .catch((err) => console.error("Error requesting pH and EC readings:", err));
+        };
+
+        fetchPHECValues(); // run immediately
+        const interval = setInterval(fetchPHECValues, 900);
+
+        return () => clearInterval(interval);
+    }, [backend_uri]);
+
+    // Fetch state/config once and periodically
     useEffect(() => {
         const fetchState = () => {
             fetch(backend_uri + "/get-state")
@@ -58,6 +89,39 @@ function LowLevelControlsTab() {
         fetchState();
         fetchConfig();
         const interval = setInterval(fetchState, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Fetch raw readings every 3s
+    useEffect(() => {
+        const fetchRawReadings = () => {
+            // probes
+            Promise.all(
+                [0, 1, 2, 3, 4].map((id) =>
+                    fetch(`${backend_uri}/get-current-probe-reading/${id}`)
+                        .then((res) => res.json())
+                        .then((data) => data.value)
+                        .catch(() => null)
+                )
+            ).then((values) => {
+                if (values) setProbeReadings(values);
+            });
+
+            // ec
+            fetch(`${backend_uri}/get-current-ec-reading`)
+                .then((res) => res.json())
+                .then((data) => setEcReading(data.value))
+                .catch(() => null);
+
+            // ph
+            fetch(`${backend_uri}/get-current-ph-reading`)
+                .then((res) => res.json())
+                .then((data) => setPhReading(data.value))
+                .catch(() => null);
+        };
+
+        fetchRawReadings();
+        const interval = setInterval(fetchRawReadings, 2000);
         return () => clearInterval(interval);
     }, []);
 
@@ -187,7 +251,6 @@ function LowLevelControlsTab() {
                     >
                         <div>
                             <p className="font-semibold text-gray-800">{layer.name}</p>
-                            {/*<p className="text-sm text-gray-500">ID={layer.id_}</p>*/}
                         </div>
 
                         <div className="flex space-x-4">
@@ -267,7 +330,6 @@ function LowLevelControlsTab() {
                 </div>
             </div>
 
-
             {/* Mixing reservoir + Additive mixing */}
             <div className="bg-white p-6 rounded-lg shadow space-y-4">
                 <h2 className="font-semibold text-lg text-gray-800">
@@ -320,6 +382,26 @@ function LowLevelControlsTab() {
                 >
                     🚨 Turn everything OFF
                 </button>
+            </div>
+
+            {/* Raw readings */}
+            <div className="bg-white p-6 rounded-lg shadow space-y-2">
+                <h2 className="font-semibold text-lg text-gray-800">
+                    Current Raw Readings
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                    {probeReadings.map((val, idx) => (
+                        <div key={idx} className="p-2 border rounded">
+                            PROBE {idx + 1}: <span className="font-mono">{val}</span>
+                        </div>
+                    ))}
+                    <div className="p-2 border rounded">
+                        EC: <span className="font-mono">{ecReading}</span>
+                    </div>
+                    <div className="p-2 border rounded">
+                        pH: <span className="font-mono">{phReading}</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

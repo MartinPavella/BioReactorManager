@@ -55,7 +55,7 @@ PHCOND_RE = re.compile(r"^ph-cond:(\d+):(\d+)$")
 PHCOND_current_RE = re.compile(r"^ph-cond_reading:(\d+):(\d+)$")
 
 latest_biomass_values: dict[int, list[float]] = {}
-latest_probe_reading: dict[int, int]
+latest_probe_reading: dict[int, int] = {}
 latest_ph_values: list[float] = []
 latest_ph_reading: int | None = None
 latest_ec_values: list[float] = []
@@ -111,6 +111,8 @@ def on_message(client, userdata, message):
         layer_id = int(m.group(1))
         reading = int(m.group(2))
 
+        latest_probe_reading[layer_id] = reading
+
         # Transform the reading into the corresponding biomass value.
         value = probe_reading_to_value(reading, layer_id)
 
@@ -126,6 +128,10 @@ def on_message(client, userdata, message):
     if m := PHCOND_current_RE.match(msg):
         raw_ph = int(m.group(1))
         raw_cond = int(m.group(2))
+
+        global latest_ph_reading, latest_ec_reading
+        latest_ph_reading = raw_ph
+        latest_ec_reading = raw_cond
 
         ph_value = ph_reading_to_value(raw_ph)
         ec_value = conductivity_reading_to_value(raw_cond)
