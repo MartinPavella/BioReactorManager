@@ -152,10 +152,18 @@ def _run_automatic_cultivation():
         if datetime.now() - last_actions['reservoir_mixing'] > timedelta(
                 minutes=Config.get()['reservoir_mixing_period_minutes']):
             # Mix the reservoir.
+            state_ = State.get()
+            state_['reservoir_mixing_on'] = True
+            State.set(state_)
+
             mqtt_manager.reservoir_mixing_on()
             time.sleep(Config.get()['reservoir_mixing_duration_seconds'])
             mqtt_manager.reservoir_mixing_off()
             last_actions['reservoir_mixing'] = datetime.now()
+
+            state_ = State.get()
+            state_['reservoir_mixing_on'] = False
+            State.set(state_)
 
         if datetime.now() - last_actions['layer_mixing'] > timedelta(
                 minutes=Config.get()['layer_mixing_period_minutes']):
@@ -169,11 +177,28 @@ def _run_automatic_cultivation():
                 current_power *= 0.97  # Drop by 3% for every lower level.
 
             for layer_id in reversed(range(5)):  # Start from the bottom to now have to wait for the water to rise up.
-                mqtt_manager.start_pump(pump_powers[layer_id])
+                power = pump_powers[layer_id]
+                state_ = State.get()
+                state_['pump_on'] = True
+                state_['pump_power'] = power
+                state_['layers'][layer_id]['valve_on'] = True
+                State.set(state_)
+                mqtt_manager.start_pump(power)
                 mqtt_manager.open_valve(layer_id)
+
                 time.sleep(Config.get()['layer_mixing_duration_seconds'])
+
                 mqtt_manager.close_valve(layer_id)
+                state_ = State.get()
+                state_['layers'][layer_id]['valve_on'] = False
+                State.set(state_)
+
             mqtt_manager.stop_pump()
+            state_ = State.get()
+            state_['pump_on'] = False
+            State.set(state_)
+
+            last_actions['layer_mixing'] = datetime.now()
 
     continue_running = True
     while State.get()['automatic_cultivation_on'] and continue_running:
