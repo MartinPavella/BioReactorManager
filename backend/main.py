@@ -104,9 +104,11 @@ class ConfigMeta(BaseModel):
     cultivation_cycle_start: str  # Uses the format "HH:MM".
     cultivation_cycle_end: str  # Uses the format "HH:MM".
     probe_reading_period_minutes: int
-    medium_mixing_period_minutes: int
-    medium_mixing_intensity: int
-    medium_mixing_duration_seconds: int
+    layer_mixing_period_minutes: int
+    layer_mixing_intensity: int
+    layer_mixing_duration_seconds: int
+    reservoir_mixing_period_minutes: int
+    reservoir_mixing_duration_seconds: int
     additive_names: list[str]
 
 

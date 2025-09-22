@@ -7,9 +7,16 @@ function ConfigurationTab() {
     const [cultivationEnd, setCultivationEnd] = useState("21:00");
     const [probePeriod, setProbePeriod] = useState(60);
     const [mediumPeriod, setMediumPeriod] = useState(60);
-    const [mixingPeriod, setMixingPeriod] = useState(10);
-    const [mixingIntensity, setMixingIntensity] = useState(50);
-    const [mixingDuration, setMixingDuration] = useState(5);
+
+    // Layer mixing
+    const [layerMixingPeriod, setLayerMixingPeriod] = useState(10);
+    const [layerMixingIntensity, setLayerMixingIntensity] = useState(50);
+    const [layerMixingDuration, setLayerMixingDuration] = useState(5);
+
+    // Reservoir mixing
+    const [reservoirMixingPeriod, setReservoirMixingPeriod] = useState(10);
+    const [reservoirMixingDuration, setReservoirMixingDuration] = useState(5);
+
     const [additiveNames, setAdditiveNames] = useState(["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
     const [saving, setSaving] = useState(false);
 
@@ -22,9 +29,16 @@ function ConfigurationTab() {
                 setCultivationEnd(data.cultivation_cycle_end || "21:00");
                 setProbePeriod(data.probe_reading_period_minutes || 60);
                 setMediumPeriod(data.medium_reading_period_minutes || 60);
-                setMixingPeriod(data.medium_mixing_period_minutes || 10);
-                setMixingIntensity(data.medium_mixing_intensity || 50);
-                setMixingDuration(data.medium_mixing_duration_seconds || 5);
+
+                // Layer mixing
+                setLayerMixingPeriod(data.layer_mixing_period_minutes || 10);
+                setLayerMixingIntensity(data.layer_mixing_intensity || 50);
+                setLayerMixingDuration(data.layer_mixing_duration_seconds || 5);
+
+                // Reservoir mixing
+                setReservoirMixingPeriod(data.reservoir_mixing_period_minutes || 10);
+                setReservoirMixingDuration(data.reservoir_mixing_duration_seconds || 5);
+
                 setAdditiveNames(data.additive_names || ["Additive 1", "Additive 2", "Additive 3", "Additive 4"]);
             })
             .catch((err) => console.error("Error fetching config:", err));
@@ -43,9 +57,16 @@ function ConfigurationTab() {
             cultivation_cycle_end: cultivationEnd,
             probe_reading_period_minutes: probePeriod,
             medium_reading_period_minutes: mediumPeriod,
-            medium_mixing_period_minutes: mixingPeriod,
-            medium_mixing_intensity: mixingIntensity,
-            medium_mixing_duration_seconds: mixingDuration,
+
+            // Layer mixing
+            layer_mixing_period_minutes: layerMixingPeriod,
+            layer_mixing_intensity: layerMixingIntensity,
+            layer_mixing_duration_seconds: layerMixingDuration,
+
+            // Reservoir mixing
+            reservoir_mixing_period_minutes: reservoirMixingPeriod,
+            reservoir_mixing_duration_seconds: reservoirMixingDuration,
+
             additive_names: additiveNames
         };
 
@@ -124,38 +145,61 @@ function ConfigurationTab() {
                 </label>
             </div>
 
-            {/* Medium mixing */}
+            {/* Layer Mixing */}
             <div className="bg-white p-6 rounded-lg shadow space-y-4">
-                <h3 className="text-lg font-semibold">Medium Mixing</h3>
+                <h3 className="text-lg font-semibold">Layer Mixing</h3>
                 <label className="flex items-center space-x-2">
                     <span>Period (minutes):</span>
                     <input
                         type="number"
                         min="1" step="1"
-                        value={mixingPeriod}
-                        onChange={(e) => setMixingPeriod(enforcePositiveInt(e.target.value, mixingPeriod))}
+                        value={layerMixingPeriod}
+                        onChange={(e) => setLayerMixingPeriod(enforcePositiveInt(e.target.value, layerMixingPeriod))}
                         className="border rounded p-2 w-24"
                     />
                 </label>
-
                 <label className="flex items-center space-x-2">
-                    <span className="mb-2">Intensity:</span>
+                    <span>Intensity:</span>
                     <input
                         type="number"
                         min="1" step="1"
-                        value={mixingIntensity}
-                        onChange={(e) => setMixingIntensity(enforcePositiveInt(e.target.value, mixingIntensity))}
+                        value={layerMixingIntensity}
+                        onChange={(e) => setLayerMixingIntensity(enforcePositiveInt(e.target.value, layerMixingIntensity))}
                         className="border rounded p-2 w-24"
                     />
                 </label>
-
                 <label className="flex items-center space-x-2">
-                    <span className="mb-2">Duration (seconds):</span>
+                    <span>Duration (seconds):</span>
                     <input
                         type="number"
                         min="1" step="1"
-                        value={mixingDuration}
-                        onChange={(e) => setMixingDuration(enforcePositiveInt(e.target.value, mixingDuration))}
+                        value={layerMixingDuration}
+                        onChange={(e) => setLayerMixingDuration(enforcePositiveInt(e.target.value, layerMixingDuration))}
+                        className="border rounded p-2 w-24"
+                    />
+                </label>
+            </div>
+
+            {/* Reservoir Mixing */}
+            <div className="bg-white p-6 rounded-lg shadow space-y-4">
+                <h3 className="text-lg font-semibold">Reservoir Mixing</h3>
+                <label className="flex items-center space-x-2">
+                    <span>Period (minutes):</span>
+                    <input
+                        type="number"
+                        min="1" step="1"
+                        value={reservoirMixingPeriod}
+                        onChange={(e) => setReservoirMixingPeriod(enforcePositiveInt(e.target.value, reservoirMixingPeriod))}
+                        className="border rounded p-2 w-24"
+                    />
+                </label>
+                <label className="flex items-center space-x-2">
+                    <span>Duration (seconds):</span>
+                    <input
+                        type="number"
+                        min="1" step="1"
+                        value={reservoirMixingDuration}
+                        onChange={(e) => setReservoirMixingDuration(enforcePositiveInt(e.target.value, reservoirMixingDuration))}
                         className="border rounded p-2 w-24"
                     />
                 </label>
