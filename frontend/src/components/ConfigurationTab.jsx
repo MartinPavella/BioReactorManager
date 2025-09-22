@@ -3,8 +3,8 @@ import {useEffect, useState} from "react";
 function ConfigurationTab() {
     const backend_uri = "http://bioreactor.local:8000";
 
-    const [lightStart, setLightStart] = useState("05:00");
-    const [lightEnd, setLightEnd] = useState("21:00");
+    const [cultivationStart, setCultivationStart] = useState("05:00");
+    const [cultivationEnd, setCultivationEnd] = useState("21:00");
     const [probePeriod, setProbePeriod] = useState(60);
     const [mediumPeriod, setMediumPeriod] = useState(60);
     const [mixingPeriod, setMixingPeriod] = useState(10);
@@ -18,8 +18,8 @@ function ConfigurationTab() {
         fetch(backend_uri + "/get-config")
             .then((res) => res.json())
             .then((data) => {
-                setLightStart(data.light_cycle_start || "05:00");
-                setLightEnd(data.light_cycle_end || "21:00");
+                setCultivationStart(data.cultivation_cycle_start || "05:00");
+                setCultivationEnd(data.cultivation_cycle_end || "21:00");
                 setProbePeriod(data.probe_reading_period_minutes || 60);
                 setMediumPeriod(data.medium_reading_period_minutes || 60);
                 setMixingPeriod(data.medium_mixing_period_minutes || 10);
@@ -39,8 +39,8 @@ function ConfigurationTab() {
     const handleSave = () => {
         setSaving(true);
         const body = {
-            light_cycle_start: lightStart,
-            light_cycle_end: lightEnd,
+            cultivation_cycle_start: cultivationStart,
+            cultivation_cycle_end: cultivationEnd,
             probe_reading_period_minutes: probePeriod,
             medium_reading_period_minutes: mediumPeriod,
             medium_mixing_period_minutes: mixingPeriod,
@@ -73,16 +73,16 @@ function ConfigurationTab() {
         <div className="w-full max-w-2xl space-y-6">
             <h2 className="text-2xl font-bold text-green-700">System Configuration</h2>
 
-            {/* Light cycle */}
+            {/* Cultivation cycle */}
             <div className="bg-white p-6 rounded-lg shadow space-y-4">
-                <h3 className="text-lg font-semibold">Light Cycle</h3>
+                <h3 className="text-lg font-semibold">Cultivation Cycle</h3>
                 <div className="flex space-x-4">
                     <div className="flex flex-col">
                         <label className="font-medium">Start</label>
                         <input
                             type="time"
-                            value={lightStart}
-                            onChange={(e) => setLightStart(e.target.value)}
+                            value={cultivationStart}
+                            onChange={(e) => setCultivationStart(e.target.value)}
                             className="border rounded p-2"
                         />
                     </div>
@@ -90,8 +90,8 @@ function ConfigurationTab() {
                         <label className="font-medium">End</label>
                         <input
                             type="time"
-                            value={lightEnd}
-                            onChange={(e) => setLightEnd(e.target.value)}
+                            value={cultivationEnd}
+                            onChange={(e) => setCultivationEnd(e.target.value)}
                             className="border rounded p-2"
                         />
                     </div>
