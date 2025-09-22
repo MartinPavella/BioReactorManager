@@ -101,8 +101,8 @@ class Config:
 
 
 class ConfigMeta(BaseModel):
-    light_cycle_start: str  # Uses the format "HH:MM".
-    light_cycle_end: str  # Uses the format "HH:MM".
+    cultivation_cycle_start: str  # Uses the format "HH:MM".
+    cultivation_cycle_end: str  # Uses the format "HH:MM".
     probe_reading_period_minutes: int
     medium_mixing_period_minutes: int
     medium_mixing_intensity: int
@@ -129,8 +129,8 @@ def _run_automatic_cultivation():
     continue_running = True
     while State.get()['automatic_cultivation_on'] and continue_running:
         # Decode the start and end time from the config. They use the format "HH:MM".
-        start_time = datetime.strptime(Config.get()['light_cycle_start'], '%H:%M').time()
-        end_time = datetime.strptime(Config.get()['light_cycle_end'], '%H:%M').time()
+        start_time = datetime.strptime(Config.get()['cultivation_cycle_start'], '%H:%M').time()
+        end_time = datetime.strptime(Config.get()['cultivation_cycle_end'], '%H:%M').time()
 
         now = datetime.now(ZoneInfo(time_zone)).time()
 
