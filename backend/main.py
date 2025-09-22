@@ -191,14 +191,44 @@ def get_probe_data(id_: int):
     return database_manager.get_all_probe_readings(id_)
 
 
+@app.get("/get-current-biomass-value/{id_}")
+def get_current_probe_reading(id_: int):
+    return {"value": mqtt_manager.get_current_biomass_value(id_)}
+
+
 @app.get("/get-current-probe-reading/{id_}")
 def get_current_probe_reading(id_: int):
     return {"value": mqtt_manager.get_current_probe_reading(id_)}
 
 
+@app.get("/get-current-ec-value")
+def get_current_ec_reading():
+    return {"value": mqtt_manager.get_current_ec_value()}
+
+
+@app.get("/get-current-ec-reading")
+def get_current_ec_reading():
+    return {"value": mqtt_manager.get_current_ec_reading()}
+
+
+@app.get("/get-current-ph-value")
+def get_current_ph_reading():
+    return {"value": mqtt_manager.get_current_ph_value()}
+
+
+@app.get("/get-current-ph-reading")
+def get_current_ph_reading():
+    return {"value": mqtt_manager.get_current_ph_reading()}
+
+
 @app.get("/request-current-probe-measurements")
 def request_current_probe_measurements():
     mqtt_manager.request_current_probe_readings()
+
+
+@app.get("/request-current-ph-ec-measurements")
+def request_current_ph_ec_measurements():
+    mqtt_manager.request_current_ph_ec_readings()
 
 
 @app.get("/get-ph-conductivity-data")
