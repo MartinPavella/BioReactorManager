@@ -2,7 +2,7 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI
@@ -104,6 +104,7 @@ class ConfigMeta(BaseModel):
     cultivation_cycle_start: str  # Uses the format "HH:MM".
     cultivation_cycle_end: str  # Uses the format "HH:MM".
     probe_reading_period_minutes: int
+    medium_reading_period_minutes: int
     layer_mixing_period_minutes: int
     layer_mixing_intensity: int
     layer_mixing_duration_seconds: int
@@ -127,6 +128,52 @@ def _run_automatic_cultivation():
          is True.
      """
     time_zone = "Europe/Prague"
+
+    last_actions = {
+        "reservoir_mixing": datetime.now(),
+        "layer_mixing": datetime.now(),
+        "probe_reading": datetime.now(),
+        "medium_reading": datetime.now(),
+    }
+
+    def check_timed_events():
+        if datetime.now() - last_actions['probe_reading'] > timedelta(
+                minutes=Config.get()['probe_reading_period_minutes']):
+            # Make biomass measurement.
+            mqtt_manager.trigger_probe_measurement()
+            last_actions['probe_reading'] = datetime.now()
+
+        if datetime.now() - last_actions['medium_reading'] > timedelta(
+                minutes=Config.get()['medium_reading_period_minutes']):
+            # Make pH and conductivity measurement.
+            mqtt_manager.trigger_ph_cond_measurement()
+            last_actions['medium_reading'] = datetime.now()
+
+        if datetime.now() - last_actions['reservoir_mixing'] > timedelta(
+                minutes=Config.get()['reservoir_mixing_period_minutes']):
+            # Mix the reservoir.
+            mqtt_manager.reservoir_mixing_on()
+            time.sleep(Config.get()['reservoir_mixing_duration_seconds'])
+            mqtt_manager.reservoir_mixing_off()
+            last_actions['reservoir_mixing'] = datetime.now()
+
+        if datetime.now() - last_actions['layer_mixing'] > timedelta(
+                minutes=Config.get()['layer_mixing_period_minutes']):
+            # Mix the layers.
+
+            # Compute the pump power for each layer.
+            pump_powers = []
+            current_power = Config.get()['layer_mixing_intensity']
+            for _ in range(5):
+                pump_powers.append(int(current_power))
+                current_power *= 0.97  # Drop by 3% for every lower level.
+
+            for layer_id in reversed(range(5)):  # Start from the bottom to now have to wait for the water to rise up.
+                mqtt_manager.start_pump(pump_powers[layer_id])
+                mqtt_manager.open_valve(layer_id)
+                time.sleep(Config.get()['layer_mixing_duration_seconds'])
+                mqtt_manager.close_valve(layer_id)
+            mqtt_manager.stop_pump()
 
     continue_running = True
     while State.get()['automatic_cultivation_on'] and continue_running:
@@ -160,16 +207,6 @@ def _run_automatic_cultivation():
                 layer['light_on'] = False
             State.set(state)
 
-        if now.second >= 50:
-            mqtt_manager.open_valve(0)
-            for _ in range(4):
-                mqtt_manager.start_pump(70)
-                time.sleep(1)
-                mqtt_manager.start_pump(50)
-                time.sleep(1)
-            mqtt_manager.stop_pump()
-            mqtt_manager.close_valve(0)
-
         # Check whether this thread should be killed every second, and check if the lights should be switched on/off
         #  evert 10 seconds.
         for _ in range(10):
@@ -178,8 +215,11 @@ def _run_automatic_cultivation():
                 logging.info(f"Automatic Cultivation: Terminating condition ({threading.current_thread().name}).")
                 continue_running = False
                 break
+
             else:
-                # Try again in a second.
+                # Check if there are any timed events which should be handled.
+                check_timed_events()
+
                 time.sleep(1)
 
 

@@ -123,7 +123,7 @@ function ConfigurationTab() {
             <div className="bg-white p-6 rounded-lg shadow space-y-2">
                 <h3 className="text-lg font-semibold">Sensor Readings</h3>
                 <label className="flex items-center space-x-2">
-                    <span>PROBE reading period (minutes):</span>
+                    <span>Biomass reading period (minutes):</span>
                     <input
                         type="number"
                         min="1" step="1"
