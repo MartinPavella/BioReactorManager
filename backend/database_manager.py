@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import datetime
 
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 probe_file_name = "probe_readings.json"
@@ -56,6 +57,17 @@ def get_all_probe_readings(layer_id: int) -> list[str]:
     return data.get(str(layer_id), [])
 
 
+def delete_all_probe_readings():
+    try:
+        if os.path.exists(probe_file_name):
+            os.remove(probe_file_name)
+            return {"status": "success", "message": "Probe readings deleted"}
+        else:
+            return {"status": "success", "message": "Probe file not found (already deleted)"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting probe readings: {str(e)}")
+
+
 def _load_ph_cond_data():
     if os.path.exists(ph_conductivity_file_name):
         with open(ph_conductivity_file_name, "r") as f:
@@ -80,3 +92,14 @@ def log_ph_conductivity_reading(sample: PHConductivityReading):
     data.append(sample.model_dump())
     _save_ph_cond_data(data)
     return {"status": "ok", "count": len(data)}
+
+
+def delete_all_ph_conductivity_readings():
+    try:
+        if os.path.exists(ph_conductivity_file_name):
+            os.remove(ph_conductivity_file_name)
+            return {"status": "success", "message": "pH/EC readings deleted"}
+        else:
+            return {"status": "success", "message": "pH/EC file not found (already deleted)"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting pH/EC readings: {str(e)}")

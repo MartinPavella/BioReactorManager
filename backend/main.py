@@ -535,6 +535,16 @@ def toggle_pump():
     return {"new_pump_on": state['pump_on']}
 
 
+@app.delete("/delete-ph-ec-readings")
+async def delete_ph_ec_readings():
+    database_manager.delete_all_ph_conductivity_readings()
+
+
+@app.delete("/delete-probe-readings")
+async def delete_probe_readings():
+    database_manager.delete_all_probe_readings()
+
+
 @app.post('/harvest-all')
 def harvest_all():
     # TODO Rework!
