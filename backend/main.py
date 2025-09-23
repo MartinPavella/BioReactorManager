@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import numpy as np
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -111,6 +112,12 @@ class ConfigMeta(BaseModel):
     reservoir_mixing_period_minutes: int
     reservoir_mixing_duration_seconds: int
     additive_names: list[str]
+    target_ph: float
+    ph_tolerance: float
+    target_ec: float
+    ec_tolerance: float
+    additive_doses: list[float]  # In seconds.
+    additive_integration_mixing_seconds: int  # Seconds.
 
 
 @app.post('/set-config')
@@ -134,6 +141,7 @@ def _run_automatic_cultivation():
         "layer_mixing": datetime.now(),
         "probe_reading": datetime.now(),
         "medium_reading": datetime.now(),
+        "additive_refreshing": datetime.now(),
     }
 
     def check_timed_events():
@@ -199,6 +207,60 @@ def _run_automatic_cultivation():
             State.set(state_)
 
             last_actions['layer_mixing'] = datetime.now()
+
+        if datetime.now() - last_actions['additive_refreshing'] > timedelta(minutes=5):  # Hard coded 5 minutes.
+            hard_iteration_limit = 10  # Don't refresh the additives more than 10 times, in case of an error.
+            target_ph = Config.get()['target_ph']
+            target_ec = Config.get()['target_ec']
+
+            for _ in range(hard_iteration_limit):
+                # Make 10 pH and EC measurements.
+                for _ in range(10):
+                    mqtt_manager.trigger_ph_cond_measurement()
+
+                State.set(dict(State.get(), additive_mixing_on=True))
+                mqtt_manager.additive_mixing_on()
+
+                time.sleep(0.5)  # Wait for the responses.
+
+                current_ph = mqtt_manager.get_current_ph_value()
+                current_ec = mqtt_manager.get_current_ec_value()
+
+                if current_ph == 0 or current_ec == 0:  # Only continue if we got some data.
+                    break
+
+                if (np.allclose(current_ph, target_ph, atol=Config.get()['ph_tolerance']) and
+                        np.allclose(current_ec, target_ec, atol=Config.get()['ec_tolerance'])):
+                    # Additive levels are OK.
+                    break
+
+                # Mix in the additives.
+                for peristaltic_id, duration in enumerate(Config.get()['additive_doses']):
+                    state_ = State.get()
+                    state_['peristaltics'][peristaltic_id]['on'] = True
+                    State.set(state_)
+                    mqtt_manager.peristaltic_on(peristaltic_id)
+
+                    time.sleep(duration)
+
+                    mqtt_manager.peristaltic_off(peristaltic_id)
+                    state_ = State.get()
+                    state_['peristaltics'][peristaltic_id]['on'] = False
+                    State.set(state_)
+
+                # Mix the whole reservoir.
+                State.set(dict(State.get(), reservoir_mixing_on=True))
+                mqtt_manager.reservoir_mixing_on()
+
+                time.sleep(Config.get()['additive_integration_mixing_seconds'])
+
+                mqtt_manager.reservoir_mixing_off()
+                State.set(dict(State.get(), reservoir_mixing_on=False))
+
+            mqtt_manager.additive_mixing_off()
+            State.set(dict(State.get(), additive_mixing_on=False))
+
+            last_actions['additive_refreshing'] = datetime.now()
 
     continue_running = True
     while State.get()['automatic_cultivation_on'] and continue_running:
