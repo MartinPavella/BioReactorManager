@@ -13,5 +13,16 @@
     "Additive 2",
     "Additive 3",
     "Additive 4"
-  ]
+  ],
+  "target_ph": 7,
+  "ph_tolerance": 0.1,
+  "target_ec": 1.5,
+  "ec_tolerance": 0.1,
+  "additive_doses": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "additive_integration_mixing_seconds": 10
 }
