@@ -88,7 +88,7 @@ function LowLevelControlsTab() {
 
         fetchState();
         fetchConfig();
-        const interval = setInterval(fetchState, 5000);
+        const interval = setInterval(fetchState, 1000);
         return () => clearInterval(interval);
     }, []);
 
