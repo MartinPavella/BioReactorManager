@@ -130,7 +130,7 @@ function ChartsTab() {
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+        <div className="grid grid-cols-1 gap-6 w-full max-w-5xl">
             {/* pH + EC chart */}
             <div className="flex flex-col">
                 <PHCondChart key={phEcReloadKey} ec={ecValue} ph={phValue}/>

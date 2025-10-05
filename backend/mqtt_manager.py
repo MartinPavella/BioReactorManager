@@ -307,11 +307,6 @@ def get_current_ec_value() -> float:
     return sum(logs) / len(logs)
 
 
-def harvest_layer(layer_id: int, duration_seconds: int):
-    # Stub kept for future orchestration
-    pass
-
-
 # --- Client setup -------------------------------------------------------------
 client = mqtt.Client(
     client_id="ClientA",
