@@ -293,18 +293,18 @@ def get_current_ph_reading() -> int:
     return latest_ph_reading or 0
 
 
-def get_current_ph_value() -> int:
+def get_current_ph_value() -> float:
     logs = latest_ph_values if latest_ph_values else [0.]
-    return int(sum(logs) / len(logs))
+    return sum(logs) / len(logs)
 
 
 def get_current_ec_reading() -> int:
     return latest_ec_reading or 0
 
 
-def get_current_ec_value() -> int:
+def get_current_ec_value() -> float:
     logs = latest_ec_values if latest_ec_values else [0.]
-    return int(sum(logs) / len(logs))
+    return sum(logs) / len(logs)
 
 
 def harvest_layer(layer_id: int, duration_seconds: int):
