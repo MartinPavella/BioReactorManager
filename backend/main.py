@@ -365,13 +365,30 @@ def get_ph_conductivity_data():
     return database_manager.get_ph_conductivity_readings()
 
 
-class HarvestMeta(BaseModel):
-    duration: int
-
-
 @app.post('/harvest-layer/{id_}')
-def harvest_layer(id_: int, harvest_meta: HarvestMeta):
-    mqtt_manager.harvest_layer(layer_id=id_, duration_seconds=harvest_meta.duration)
+def harvest_layer(id_: int):
+    # id_ = 0 -> layer 5
+    # id_ = 4 -> layer 1
+    pump_power = 50 + 3 * (4 - id_)
+
+    state = State.get()
+    state['layers'][id_]['valve_on'] = True
+    state['pump_on'] = True
+    state['pump_power'] = pump_power
+
+    mqtt_manager.open_valve(id_)
+    mqtt_manager.start_pump(pump_power)
+    State.set(state)
+
+    time.sleep(10)
+
+    state = State.get()
+    state['layers'][id_]['valve_on'] = False
+    state['pump_on'] = False
+    mqtt_manager.close_valve(id_)
+    mqtt_manager.stop_pump()
+    State.set(state)
+
     return [f'Successfully harvested layer {id_}.']
 
 

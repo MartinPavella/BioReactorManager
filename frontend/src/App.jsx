@@ -3,10 +3,11 @@ import ChartsTab from "./components/ChartsTab.jsx";
 import HighLevelControlsTab from "./components/HighLevelControlsTab.jsx";
 import LowLevelControlsTab from "./components/LowLevelControlsTab.jsx";
 import ConfigurationTab from "./components/ConfigurationTab.jsx";
+import HarvestTab from "./components/HarvestTab.jsx"; // <-- NEW IMPORT
 import "./App.css";
 
 const App = () => {
-    const [activeTab, setActiveTab] = useState("highlevel"); // NEW state for tab navigation
+    const [activeTab, setActiveTab] = useState("highlevel");
 
     return (
         <div className="flex flex-col items-center min-h-screen bg-gray-100">
@@ -27,6 +28,19 @@ const App = () => {
                 >
                     Home
                 </button>
+
+                {/* NEW HARVEST TAB */}
+                <button
+                    onClick={() => setActiveTab("harvest")}
+                    className={`flex-1 py-3 text-lg font-semibold transition-colors ${
+                        activeTab === "harvest"
+                            ? "bg-green-600 text-white hover:bg-green-700"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    } rounded-t-md`}
+                >
+                    Harvest
+                </button>
+
                 <button
                     onClick={() => setActiveTab("charts")}
                     className={`flex-1 py-3 text-lg font-semibold transition-colors ${
@@ -62,6 +76,7 @@ const App = () => {
             {/* Tab content */}
             <div className="w-full max-w-3xl flex-grow p-6 flex justify-center">
                 {activeTab === "highlevel" && <HighLevelControlsTab/>}
+                {activeTab === "harvest" && <HarvestTab/>} {/* <-- NEW TAB */}
                 {activeTab === "charts" && <ChartsTab/>}
                 {activeTab === "lowlevel" && <LowLevelControlsTab/>}
                 {activeTab === "config" && <ConfigurationTab/>}
