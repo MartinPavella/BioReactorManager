@@ -174,7 +174,7 @@ function LowLevelControlsTab() {
             fetch(backend_uri + `/pump-power-change/${value}`, {method: "POST"})
                 .then((res) => res.json())
                 .catch((err) => console.error("Error setting pump power:", err));
-        }, 300);
+        }, 50);
     };
 
     const handlePeristalticToggle = (id) => {
