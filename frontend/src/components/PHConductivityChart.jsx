@@ -56,8 +56,8 @@ const PHCondChart = ({ph, ec}) => {
             <h2 className="text-center mb-2 text-lg font-semibold">
                 Medium pH and Conductivity
                 <div className="mt-2 text-center text-sm text-gray-600">
-                    {ph === 0 ? "pH probe not connected" : `Current pH: ${ph}`} |{" "}
-                    {ec === 0 ? "EC probe not connected" : `Current EC: ${ec} mS/cm`}
+                    {ph === 0 ? "pH probe not connected" : `Current pH: ${ph.toFixed(1)}`} |{" "}
+                    {ec === 0 ? "EC probe not connected" : `Current EC: ${ec.toFixed(2)} mS/cm`}
                 </div>
             </h2>
             <div style={{height: "300px"}}>
@@ -86,8 +86,8 @@ const PHCondChart = ({ph, ec}) => {
                                         display: true,
                                         text: "pH",
                                     },
-                                    min: 5,
-                                    max: 9,
+                                    min: 1,
+                                    max: 14,
                                 },
                                 y2: {
                                     type: "linear",
